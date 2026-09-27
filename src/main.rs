@@ -1,5 +1,5 @@
-//! SideScreen for Windows and Linux: use an Android tablet as a second display over USB or
-//! Wi-Fi. The tablet runs the SideScreen app; the Mac version is github.com/blackb1rd/sidescreen.
+//! Spanly for Windows and Linux: use an Android tablet as a second display over USB or
+//! Wi-Fi. The tablet runs the Spanly app; the Mac version is github.com/blackb1rd/spanly.
 
 mod adb;
 mod backend;
@@ -19,7 +19,7 @@ use config::Config;
 use std::sync::{Arc, Mutex};
 
 const HELP: &str = "\
-usage: sidescreen [options]
+usage: spanly [options]
 
   --mirror             show the same picture as the main screen (default: extend, a second screen)
   --wifi on|off        let tablets that were plugged in once connect over Wi-Fi (saved)
@@ -171,5 +171,5 @@ fn host_name() -> String {
         .or_else(|_| std::env::var("HOSTNAME"))
         .ok()
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "SideScreen".into())
+        .unwrap_or_else(|| "Spanly".into())
 }

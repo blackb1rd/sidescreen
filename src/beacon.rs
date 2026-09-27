@@ -1,6 +1,6 @@
 //! Announces this computer with a small UDP message every second on each network it is on, so a
 //! tablet finds it where Bonjour doesn't reach, notably when the computer has joined the
-//! tablet's own hotspot (no router). Payload: "SSB1" + the host name the tablet knows from
+//! tablet's own hotspot (no router). Payload: "SPB1" + the host name the tablet knows from
 //! pairing. IPv4 broadcast, and IPv6 all-nodes multicast (ff02::1) for IPv6-only networks.
 //! Same as the Mac app's Beacon.swift.
 
@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
 use std::time::Duration;
 
-const MAGIC: &[u8] = b"SSB1";
+const MAGIC: &[u8] = b"SPB1";
 
 pub fn start(host_name: &str, port: u16) {
     let mut payload = MAGIC.to_vec();

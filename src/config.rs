@@ -1,6 +1,6 @@
 //! Settings kept between runs, in a small `key = value` file:
-//! Linux `$XDG_CONFIG_HOME/sidescreen/config` (or `~/.config/...`),
-//! Windows `%APPDATA%\SideScreen\config`.
+//! Linux `$XDG_CONFIG_HOME/spanly/config` (or `~/.config/...`),
+//! Windows `%APPDATA%\Spanly\config`.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -12,12 +12,11 @@ pub struct Config {
 
 pub fn dir() -> PathBuf {
     if cfg!(windows) {
-        PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| ".".into())).join("SideScreen")
+        PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| ".".into())).join("Spanly")
     } else if let Ok(x) = std::env::var("XDG_CONFIG_HOME") {
-        PathBuf::from(x).join("sidescreen")
+        PathBuf::from(x).join("spanly")
     } else {
-        PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into()))
-            .join(".config/sidescreen")
+        PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into())).join(".config/spanly")
     }
 }
 

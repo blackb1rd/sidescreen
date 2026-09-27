@@ -7,7 +7,7 @@ use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use hkdf::Hkdf;
 use sha2::Sha256;
 
-pub const MAGIC: &[u8; 4] = b"SSW1";
+pub const MAGIC: &[u8; 4] = b"SPW1";
 pub const NONCE_SIZE: usize = 16;
 pub const MAX_RECORD: usize = 20 << 20;
 
@@ -61,8 +61,8 @@ pub fn server_session(
     server_nonce: &[u8],
 ) -> (Direction, Direction) {
     let salt = [client_nonce, server_nonce].concat();
-    let send = derive(secret, &salt, "sidescreen s2c");
-    let receive = derive(secret, &salt, "sidescreen c2s");
+    let send = derive(secret, &salt, "spanly s2c");
+    let receive = derive(secret, &salt, "spanly c2s");
     (Direction::new(send), Direction::new(receive))
 }
 
@@ -93,12 +93,12 @@ mod tests {
         let (secret, cn, sn) = vectors();
         let salt = [cn, sn].concat();
         assert_eq!(
-            hex(&derive(&secret, &salt, "sidescreen c2s")),
-            "dad5e4f21f47255de3fbe0fc1523607eea3e8b80ef8044f884b03fc116f02000"
+            hex(&derive(&secret, &salt, "spanly c2s")),
+            "7b00117bc521fd6b60ab168938a85eb36ed13daf2412cf3e81de7430c27ebf00"
         );
         assert_eq!(
-            hex(&derive(&secret, &salt, "sidescreen s2c")),
-            "e44762191fb04c1f1075dd4b6a18c8250bf19da566626b76ad1c8a1e1cd366c1"
+            hex(&derive(&secret, &salt, "spanly s2c")),
+            "870ed19deb24707f0404ce34e8bb337eaeca4c7422884fe35faa23d1b05cbb57"
         );
     }
 
@@ -111,7 +111,7 @@ mod tests {
         }
         assert_eq!(
             hex(&send.seal(b"hello tablet")),
-            "82022662e775c2e0a496d1761b53c7ec67538e98813b69a8d2e73c6f"
+            "0abf9ce6e9fcb34d91cbf7019062ffe0b45bd93794ff6d3b1b1b9eb8"
         );
     }
 

@@ -1,4 +1,4 @@
-//! The tablet over Wi-Fi: a Bonjour-advertised TCP listener (`_sidescreen._tcp`, port 27184)
+//! The tablet over Wi-Fi: a Bonjour-advertised TCP listener (`_spanly._tcp`, port 27184)
 //! whose traffic is encrypted with keys derived from the secret paired over USB (crypto.rs).
 //! Same protocol as the Mac app's WifiLink.swift.
 
@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub const PORT: u16 = 27184;
-const SERVICE: &str = "_sidescreen._tcp.local.";
+const SERVICE: &str = "_spanly._tcp.local.";
 
 pub struct WifiLink {
     session: Arc<Mutex<Option<Arc<Session>>>>,

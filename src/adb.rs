@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub const PORT: u16 = 27183;
-const APP: &str = "dev.blackb1rd.sidescreen/.MainActivity";
+const APP: &str = "dev.blackb1rd.spanly/.MainActivity";
 
 pub struct AdbLink {
     session: Arc<Mutex<Option<Arc<Session>>>>,
@@ -34,9 +34,9 @@ impl AdbLink {
                     }
                 });
             }
-            Err(e) => log::warn!(
-                "could not listen on 127.0.0.1:{PORT} ({e}); is SideScreen already running?"
-            ),
+            Err(e) => {
+                log::warn!("could not listen on 127.0.0.1:{PORT} ({e}); is Spanly already running?")
+            }
         }
         if manage_adb && let Some(adb) = find_adb() {
             let serial = serial.clone();

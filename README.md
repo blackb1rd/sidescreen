@@ -1,4 +1,4 @@
-# SideScreen for Windows and Linux (beta)
+# Spanly for Windows and Linux (beta)
 
 Use an Android tablet as a second display for your PC, over a USB cable or Wi-Fi, with touch.
 
@@ -7,9 +7,9 @@ Use an Android tablet as a second display for your PC, over a USB cable or Wi-Fi
 > and input backends build and pass CI but haven't been run on real hardware yet. Please try it
 > and [open an issue](../../issues) with your OS, desktop, GPU and what happened.
 
-The tablet needs the **SideScreen** Android app. The Mac version is
-[blackb1rd/sidescreen](https://github.com/blackb1rd/sidescreen); the wire protocol is described in
-its [PROTOCOL.md](https://github.com/blackb1rd/sidescreen/blob/main/PROTOCOL.md).
+The tablet needs the **Spanly** Android app. The Mac version is
+[blackb1rd/spanly](https://github.com/blackb1rd/spanly); the wire protocol is described in
+its [PROTOCOL.md](https://github.com/blackb1rd/spanly/blob/main/PROTOCOL.md).
 
 ## Features
 
@@ -36,32 +36,32 @@ portals: GNOME and KDE Plasma, on Wayland or X11. Extend mode needs a portal tha
    Encoders are tried in this order: VA-API (Intel/AMD), NVENC (NVIDIA), x264, OpenH264.
 2. Let your user reach the tablet over USB without root:
    ```sh
-   sudo cp packaging/linux/70-sidescreen.rules /etc/udev/rules.d/
+   sudo cp packaging/linux/70-spanly.rules /etc/udev/rules.d/
    sudo udevadm control --reload
    ```
-3. Run `sidescreen` and plug in the tablet. The desktop asks once to allow remote interaction
-   (screen + input); SideScreen remembers the answer.
+3. Run `spanly` and plug in the tablet. The desktop asks once to allow remote interaction
+   (screen + input); Spanly remembers the answer.
 
 ## Windows
 
 1. **Extend mode** needs a virtual monitor: install the free, signed
    [Virtual Display Driver](https://github.com/VirtualDrivers/Virtual-Display-Driver).
-   SideScreen finds it and sets it to the tablet's resolution. **Mirror mode** (`--mirror`) needs
+   Spanly finds it and sets it to the tablet's resolution. **Mirror mode** (`--mirror`) needs
    nothing extra.
 2. **Connecting**:
    - **Wi-Fi**: works without drivers once the tablet is paired. Pairing needs one wired session
      (adb or raw USB).
    - **adb**: install the Android platform-tools and turn on USB debugging on the tablet.
-     SideScreen sets up `adb reverse` itself.
-   - **Raw USB** (fastest): Windows has no driver for Android's accessory mode. After SideScreen
-     has switched the tablet once (it then appears as "SideScreen"), use [Zadig](https://zadig.akeo.ie)
+     Spanly sets up `adb reverse` itself.
+   - **Raw USB** (fastest): Windows has no driver for Android's accessory mode. After Spanly
+     has switched the tablet once (it then appears as "Spanly"), use [Zadig](https://zadig.akeo.ie)
      to install **WinUSB** for that device's interface 0.
-3. Run `sidescreen.exe`.
+3. Run `spanly.exe`.
 
 ## Usage
 
 ```
-sidescreen [options]
+spanly [options]
 
   --mirror             show the same picture as the main screen (default: extend)
   --wifi on|off        let tablets that were plugged in once connect over Wi-Fi (saved)
@@ -75,8 +75,8 @@ sidescreen [options]
   --stats              log frame rate, latency and bitrate
 ```
 
-Settings live in `~/.config/sidescreen/config` (Linux) or `%APPDATA%\SideScreen\config` (Windows).
-With exactly one Android device plugged in, SideScreen picks it automatically.
+Settings live in `~/.config/spanly/config` (Linux) or `%APPDATA%\Spanly\config` (Windows).
+With exactly one Android device plugged in, Spanly picks it automatically.
 
 ## How it works
 

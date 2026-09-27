@@ -1355,29 +1355,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
-name = "sidescreen"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "ashpd",
- "crossbeam-channel",
- "env_logger",
- "gstreamer",
- "gstreamer-app",
- "gstreamer-video",
- "hkdf",
- "if-addrs",
- "log",
- "mdns-sd",
- "openh264",
- "rand",
- "rusb",
- "sha2",
- "tokio",
- "windows",
-]
-
-[[package]]
 name = "signal-hook-registry"
 version = "1.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1418,6 +1395,29 @@ checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
  "windows-sys",
+]
+
+[[package]]
+name = "spanly"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "ashpd",
+ "crossbeam-channel",
+ "env_logger",
+ "gstreamer",
+ "gstreamer-app",
+ "gstreamer-video",
+ "hkdf",
+ "if-addrs",
+ "log",
+ "mdns-sd",
+ "openh264",
+ "rand",
+ "rusb",
+ "sha2",
+ "tokio",
+ "windows",
 ]
 
 [[package]]

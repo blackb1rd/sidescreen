@@ -1,11 +1,11 @@
 [package]
-name = "sidescreen"
+name = "spanly"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "GPL-3.0-or-later"
 description = "Use an Android tablet as a second display for Windows and Linux over USB or Wi-Fi"
-repository = "https://github.com/blackb1rd/sidescreen-desktop"
+repository = "https://github.com/blackb1rd/spanly-desktop"
 
 [dependencies]
 aes-gcm = "0.11"

@@ -1,6 +1,6 @@
-# SideScreen: let the logged-in user talk to Android devices over USB without root:
+# Spanly: let the logged-in user talk to Android devices over USB without root:
 # switching the tablet into accessory mode, then streaming to it.
-# Install: sudo cp 70-sidescreen.rules /etc/udev/rules.d/ && sudo udevadm control --reload
+# Install: sudo cp 70-spanly.rules /etc/udev/rules.d/ && sudo udevadm control --reload
 # then unplug and replug the tablet.
 SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", TAG+="uaccess"
 SUBSYSTEM=="usb", ATTR{idVendor}=="2717", TAG+="uaccess"

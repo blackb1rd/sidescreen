@@ -3,7 +3,7 @@
 //! Android device is ever touched) is asked to re-enumerate as an accessory, then messages go
 //! over its bulk endpoints.
 //!
-//! Linux needs read/write access to the device (see packaging/linux/70-sidescreen.rules).
+//! Linux needs read/write access to the device (see packaging/linux/70-spanly.rules).
 //! Windows needs the WinUSB driver on the accessory interface (see the README).
 
 use crate::link::{Event, Link, LinkKind};
@@ -25,11 +25,11 @@ const ANDROID_VENDORS: [u16; 22] = [
 ];
 const STRINGS: [&str; 6] = [
     "blackb1rd",
-    "SideScreen",
-    "SideScreen second display",
+    "Spanly",
+    "Spanly second display",
     "1.0",
-    "https://github.com/blackb1rd/sidescreen",
-    "sidescreen",
+    "https://github.com/blackb1rd/spanly",
+    "spanly",
 ];
 const TIMEOUT: Duration = Duration::from_secs(1);
 

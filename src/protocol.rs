@@ -1,5 +1,5 @@
-//! The SideScreen wire protocol, shared with the Mac app and the Android app. See PROTOCOL.md
-//! in https://github.com/blackb1rd/sidescreen for the full description.
+//! The Spanly wire protocol, shared with the Mac app and the Android app. See PROTOCOL.md
+//! in https://github.com/blackb1rd/spanly for the full description.
 //!
 //! Every message, in both directions: `[0x5A][type u8][length u32 BE][payload]`. A reader only
 //! accepts a header whose marker matches and whose length is plausible for its type, so it can
