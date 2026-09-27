@@ -22,22 +22,29 @@ enum {
 #define kModelUID "com.caigenix.spanly.microphone.model"
 #define kManufacturer "Spanly"
 
-extern AudioServerPlugInDriverInterface *gInterfacePtr;
+extern AudioServerPlugInDriverInterface* gInterfacePtr;
 extern AudioServerPlugInHostRef gHost;
 
 // properties.c
-Boolean SS_HasProperty(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress *);
-OSStatus SS_IsPropertySettable(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress *, Boolean *);
-OSStatus SS_GetPropertyDataSize(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress *, UInt32, const void *, UInt32 *);
-OSStatus SS_GetPropertyData(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress *, UInt32, const void *, UInt32, UInt32 *, void *);
-OSStatus SS_SetPropertyData(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress *, UInt32, const void *, UInt32, const void *);
+Boolean SS_HasProperty(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress*);
+OSStatus SS_IsPropertySettable(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress*,
+                               Boolean*);
+OSStatus SS_GetPropertyDataSize(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress*,
+                                UInt32, const void*, UInt32*);
+OSStatus SS_GetPropertyData(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress*, UInt32,
+                            const void*, UInt32, UInt32*, void*);
+OSStatus SS_SetPropertyData(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress*, UInt32,
+                            const void*, UInt32, const void*);
 
 // io.c
 extern std::atomic<UInt32> gIOCount;
 OSStatus SS_StartIO(AudioServerPlugInDriverRef, AudioObjectID, UInt32);
 OSStatus SS_StopIO(AudioServerPlugInDriverRef, AudioObjectID, UInt32);
-OSStatus SS_GetZeroTimeStamp(AudioServerPlugInDriverRef, AudioObjectID, UInt32, Float64 *, UInt64 *, UInt64 *);
-OSStatus SS_WillDoIOOperation(AudioServerPlugInDriverRef, AudioObjectID, UInt32, UInt32, Boolean *, Boolean *);
-OSStatus SS_BeginIOOperation(AudioServerPlugInDriverRef, AudioObjectID, UInt32, UInt32, UInt32, const AudioServerPlugInIOCycleInfo *);
-OSStatus SS_DoIOOperation(AudioServerPlugInDriverRef, AudioObjectID, AudioObjectID, UInt32, UInt32, UInt32, const AudioServerPlugInIOCycleInfo *, void *, void *);
-OSStatus SS_EndIOOperation(AudioServerPlugInDriverRef, AudioObjectID, UInt32, UInt32, UInt32, const AudioServerPlugInIOCycleInfo *);
+OSStatus SS_GetZeroTimeStamp(AudioServerPlugInDriverRef, AudioObjectID, UInt32, Float64*, UInt64*, UInt64*);
+OSStatus SS_WillDoIOOperation(AudioServerPlugInDriverRef, AudioObjectID, UInt32, UInt32, Boolean*, Boolean*);
+OSStatus SS_BeginIOOperation(AudioServerPlugInDriverRef, AudioObjectID, UInt32, UInt32, UInt32,
+                             const AudioServerPlugInIOCycleInfo*);
+OSStatus SS_DoIOOperation(AudioServerPlugInDriverRef, AudioObjectID, AudioObjectID, UInt32, UInt32, UInt32,
+                          const AudioServerPlugInIOCycleInfo*, void*, void*);
+OSStatus SS_EndIOOperation(AudioServerPlugInDriverRef, AudioObjectID, UInt32, UInt32, UInt32,
+                           const AudioServerPlugInIOCycleInfo*);

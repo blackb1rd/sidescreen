@@ -4,7 +4,7 @@
 
 AudioServerPlugInHostRef gHost = NULL;
 static std::atomic<UInt32> gRefCount{0};
-static HRESULT SS_QueryInterface(void *driver, REFIID uuid, LPVOID *out) {
+static HRESULT SS_QueryInterface(void* driver, REFIID uuid, LPVOID* out) {
     CFUUIDRef requested = CFUUIDCreateFromUUIDBytes(NULL, uuid);
     Boolean ok = CFEqual(requested, IUnknownUUID) || CFEqual(requested, kAudioServerPlugInDriverInterfaceUUID);
     CFRelease(requested);
@@ -14,9 +14,11 @@ static HRESULT SS_QueryInterface(void *driver, REFIID uuid, LPVOID *out) {
     return S_OK;
 }
 
-static ULONG SS_AddRef(void *driver) { return gRefCount.fetch_add(1) + 1; }
+static ULONG SS_AddRef(void* driver) {
+    return gRefCount.fetch_add(1) + 1;
+}
 
-static ULONG SS_Release(void *driver) {
+static ULONG SS_Release(void* driver) {
     UInt32 n = gRefCount.load();
     if (n > 0) n = gRefCount.fetch_sub(1) - 1;
     return n;
@@ -27,7 +29,8 @@ static OSStatus SS_Initialize(AudioServerPlugInDriverRef driver, AudioServerPlug
     return noErr;
 }
 
-static OSStatus SS_CreateDevice(AudioServerPlugInDriverRef d, CFDictionaryRef desc, const AudioServerPlugInClientInfo *c, AudioObjectID *out) {
+static OSStatus SS_CreateDevice(AudioServerPlugInDriverRef d, CFDictionaryRef desc,
+                                const AudioServerPlugInClientInfo* c, AudioObjectID* out) {
     return kAudioHardwareUnsupportedOperationError;
 }
 
@@ -35,10 +38,20 @@ static OSStatus SS_DestroyDevice(AudioServerPlugInDriverRef d, AudioObjectID id)
     return kAudioHardwareUnsupportedOperationError;
 }
 
-static OSStatus SS_AddDeviceClient(AudioServerPlugInDriverRef d, AudioObjectID id, const AudioServerPlugInClientInfo *c) { return noErr; }
-static OSStatus SS_RemoveDeviceClient(AudioServerPlugInDriverRef d, AudioObjectID id, const AudioServerPlugInClientInfo *c) { return noErr; }
-static OSStatus SS_PerformConfigChange(AudioServerPlugInDriverRef d, AudioObjectID id, UInt64 action, void *info) { return noErr; }
-static OSStatus SS_AbortConfigChange(AudioServerPlugInDriverRef d, AudioObjectID id, UInt64 action, void *info) { return noErr; }
+static OSStatus SS_AddDeviceClient(AudioServerPlugInDriverRef d, AudioObjectID id,
+                                   const AudioServerPlugInClientInfo* c) {
+    return noErr;
+}
+static OSStatus SS_RemoveDeviceClient(AudioServerPlugInDriverRef d, AudioObjectID id,
+                                      const AudioServerPlugInClientInfo* c) {
+    return noErr;
+}
+static OSStatus SS_PerformConfigChange(AudioServerPlugInDriverRef d, AudioObjectID id, UInt64 action, void* info) {
+    return noErr;
+}
+static OSStatus SS_AbortConfigChange(AudioServerPlugInDriverRef d, AudioObjectID id, UInt64 action, void* info) {
+    return noErr;
+}
 
 static AudioServerPlugInDriverInterface gInterface = {
     NULL,
@@ -66,11 +79,11 @@ static AudioServerPlugInDriverInterface gInterface = {
     SS_EndIOOperation,
 };
 
-AudioServerPlugInDriverInterface *gInterfacePtr = &gInterface;
+AudioServerPlugInDriverInterface* gInterfacePtr = &gInterface;
 static AudioServerPlugInDriverRef gDriverRef = &gInterfacePtr;
 
 // Named in Info.plist (CFPlugInFactories).
-extern "C" void *Spanly_Create(CFAllocatorRef allocator, CFUUIDRef requestedType) {
+extern "C" void* Spanly_Create(CFAllocatorRef allocator, CFUUIDRef requestedType) {
     if (!CFEqual(requestedType, kAudioServerPlugInTypeUUID)) return NULL;
     return gDriverRef;
 }
