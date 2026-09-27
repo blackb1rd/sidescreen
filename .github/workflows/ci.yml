@@ -6,7 +6,8 @@ on:
   pull_request:
 
 jobs:
-  test:
+  # The Swift Mac app (until the Rust host covers macOS too).
+  mac-app:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
@@ -25,8 +26,62 @@ jobs:
           clang -bundle -Wall -Wextra -Werror -Wno-unused-parameter -arch arm64 -arch x86_64 \
             -framework CoreAudio -framework CoreFoundation mac/Driver/src/*.c -o /tmp/SpanlyMicrophone
 
-      - name: Check file length (max 500 lines)
+  # The Rust host: Windows and Linux backends, and the shared core.
+  host-linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: host
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install libraries
         run: |
-          long=$(find mac/Sources mac/Tests mac/Driver scripts -type f \( -name '*.swift' -o -name '*.sh' -o -name '*.py' -o -name '*.c' -o -name '*.h' \) \
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libusb-1.0-0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: host
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release
+
+  host-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: host
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: host
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release
+
+  host-macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: host
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install libusb pkg-config
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: host
+      - run: cargo clippy --features test-pattern --all-targets -- -D warnings
+      - run: cargo test --features test-pattern
+
+  file-length:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: No source file over 500 lines
+        run: |
+          long=$(find mac/Sources mac/Tests mac/Driver scripts host/src -type f \
+                   \( -name '*.swift' -o -name '*.sh' -o -name '*.py' -o -name '*.c' -o -name '*.h' -o -name '*.m' -o -name '*.rs' \) \
                  -exec awk 'END { if (NR > 500) print FILENAME ": " NR " lines" }' {} \;)
           if [ -n "$long" ]; then echo "$long"; exit 1; fi

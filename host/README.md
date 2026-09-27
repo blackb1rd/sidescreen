@@ -5,11 +5,11 @@ Use an Android tablet as a second display for your PC, over a USB cable or Wi-Fi
 > **Beta: needs testers.** The shared core (protocol, USB accessory link, encrypted Wi-Fi,
 > flow control) has been tested end to end with a real tablet. The Windows and Linux screen-capture
 > and input backends build and pass CI but haven't been run on real hardware yet. Please try it
-> and [open an issue](../../issues) with your OS, desktop, GPU and what happened.
+> and [open an issue](https://github.com/caigenix/spanly/issues) with your OS, desktop, GPU and what happened.
 
-The tablet needs the **Spanly** Android app. The Mac version is
-[caigenix/spanly](https://github.com/caigenix/spanly); the wire protocol is described in
-its [PROTOCOL.md](https://github.com/caigenix/spanly/blob/main/PROTOCOL.md).
+The tablet needs the **Spanly** Android app. The Mac version is in [mac/](../mac/) of this
+repository (see the [main README](../README.md)); the wire protocol is described in
+[PROTOCOL.md](../PROTOCOL.md).
 
 ## Features
 

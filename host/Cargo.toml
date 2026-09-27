@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.85"
 license = "GPL-3.0-or-later"
 description = "Use an Android tablet as a second display for Windows and Linux over USB or Wi-Fi"
-repository = "https://github.com/caigenix/spanly-desktop"
+repository = "https://github.com/caigenix/spanly"
 
 [dependencies]
 aes-gcm = "0.11"
