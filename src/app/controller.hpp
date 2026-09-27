@@ -4,6 +4,7 @@
 // Wi-Fi keeps its display, and two tablets (e.g. one on USB, one on Wi-Fi) get one each.
 // Main thread only, except where noted.
 
+#include "app/adb.hpp"
 #include "app/options.hpp"
 #include "app/session.hpp"
 #include "app/settings.hpp"
@@ -48,6 +49,14 @@ public:
     void setWifi(bool enabled);
     void forgetPairedTablets();
     void chooseTablet(const UsbTablet& t);
+    /// The tablet chosen in the menu; with nothing chosen yet, the one adb sees (if any).
+    std::string chosenSerial() const;
+    std::vector<UsbTablet> tablets() const;
+    /// Each streaming tablet's name and a short description of its stream.
+    std::vector<std::pair<std::string, std::string>> streamStatus() const;
+    /// Re-apply menu settings to running streams.
+    void applySettings(bool recreateDisplay);
+    void restartCapture();
 
 private:
     void wire(const std::shared_ptr<Link>& l);
@@ -55,7 +64,7 @@ private:
     void closed(const std::shared_ptr<Link>& l);
     void rememberTablet();
     void every(double seconds, std::function<void()> fn);
-    std::string chosenSerial() const;
+    void checkPower();
 
     Options opts_;
     Settings settings_;
@@ -64,6 +73,7 @@ private:
     std::unique_ptr<TcpListener> adb_;
     std::unique_ptr<TcpListener> wifi_;
     std::unique_ptr<Beacon> beacon_;
+    std::unique_ptr<Adb> adbTool_;
     std::vector<std::shared_ptr<TabletSession>> sessions_;
     bool onBattery_ = false;
     bool displayOn_ = true;

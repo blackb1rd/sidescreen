@@ -351,6 +351,10 @@ void TabletSession::updateCursorVisibility(platform::Point cursor, bool touchAct
     capture_->setShowsCursor(platform::displayBounds(displayId_).contains(cursor) && !touchActive);
 }
 
+void TabletSession::placeDisplay(const std::string& position, const std::vector<platform::DisplayId>& others) {
+    if (virtual_) virtual_->place(position, others);
+}
+
 void TabletSession::setDisplayAwake(bool on) {
     Bytes p{uint8_t(on ? 1 : 0)};
     link()->send(Msg::Display, p);

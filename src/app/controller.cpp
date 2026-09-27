@@ -3,6 +3,7 @@
 #include "core/log.hpp"
 
 #include <algorithm>
+#include <format>
 
 namespace spanly {
 
@@ -12,18 +13,18 @@ Controller::Controller(Options opts) : opts_(std::move(opts)), pointer_(platform
     wifi_ = std::make_unique<TcpListener>(TcpListener::kWifiPort, Link::Kind::Wifi,
                                           [this] { return settings_.wifiSecret(); });
     beacon_ = std::make_unique<Beacon>(platform::computerName(), TcpListener::kWifiPort);
+    if (opts_.manageAdb) {
+        adbTool_ = Adb::find(TcpListener::kAdbPort);
+        if (!adbTool_) log("adb not found (set ADB=/path/to/adb); the USB accessory and Wi-Fi links work without it");
+    }
 }
 
 Controller::~Controller() = default;
 
 void Controller::start() {
-    // Ask once for what the app needs: showing the screen, and turning touches into clicks.
-    if (!platform::screenRecordingAllowed()) platform::requestScreenRecording();
-    if (!platform::accessibilityAllowed()) {
+    if (!platform::accessibilityAllowed())
         log("touch input disabled until Spanly has Accessibility permission "
             "(System Settings > Privacy & Security > Accessibility)");
-        platform::requestAccessibility();
-    }
     pointer_->restoreCursor = opts_.restoreCursor.value_or(settings_.restoreCursor());
     if (usb_) wire(usb_);
     adb_->onConnection = [this](const std::shared_ptr<TcpLink>& l) { wire(l); };
@@ -47,12 +48,20 @@ void Controller::start() {
             }
         });
     }
-    // No tablet chosen yet: use the Android device that is plugged in.
-    every(2, [this] {
-        if (!usb_ || settings_.deviceSerial()) return;
-        auto found = usb_->tablets();
-        if (found.size() == 1) chooseTablet(found.front());
+    platform::watchSystem({
+        .displayPower = [this](bool awake) { setDisplayAwake(awake); },
+        .screensChanged =
+            [this] {
+                for (auto& s : sessions_) {
+                    if (opts_.displayName || s->virtualDisplayId() || (mirroring() && s->streaming()))
+                        s->scheduleRestart();
+                }
+            },
+        .willQuit = [this] { updateSpeakers(); },
     });
+    onBattery_ = platform::onBattery();
+    every(5, [this] { checkPower(); });
+    if (adbTool_) adbTool_->startWatching();
     log("listening on 127.0.0.1:{}; a virtual display appears when a tablet connects", TcpListener::kAdbPort);
 }
 
@@ -68,7 +77,52 @@ void Controller::every(double seconds, std::function<void()> fn) {
 }
 
 std::string Controller::chosenSerial() const {
-    return settings_.deviceSerial().value_or("");
+    if (auto s = settings_.deviceSerial()) return *s;
+    return adbTool_ ? adbTool_->serial().value_or("") : "";
+}
+
+std::vector<UsbTablet> Controller::tablets() const {
+    return usb_ ? usb_->tablets() : std::vector<UsbTablet>{};
+}
+
+std::vector<std::pair<std::string, std::string>> Controller::streamStatus() const {
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const auto& s : sessions_) {
+        auto [w, h] = s->size();
+        if (!s->streaming() || w == 0) continue;
+        const char* via = s->onUsb() ? "USB" : s->onWifi() ? "Wi-Fi" : "adb (slower)";
+        out.emplace_back(s->name(), std::format("{}×{} · {} · {}", w, h,
+                                                s->codec() == platform::Codec::Hevc ? "HEVC" : "H.264", via));
+    }
+    return out;
+}
+
+void Controller::applySettings(bool recreateDisplay) {
+    pointer_->restoreCursor = opts_.restoreCursor.value_or(settings_.restoreCursor());
+    if (recreateDisplay) {
+        for (auto& s : sessions_)
+            s->recreateDisplay();
+        return;
+    }
+    for (auto& s : sessions_)
+        s->placeDisplay(position(), virtualDisplays());
+}
+
+void Controller::restartCapture() {
+    for (auto& s : sessions_)
+        s->restartCapture();
+}
+
+void Controller::checkPower() {
+    bool now = platform::onBattery();
+    if (now == onBattery_) return;
+    onBattery_ = now;
+    if (opts_.batteryFps <= 0 || opts_.batteryFps >= opts_.fps) return;
+    log("{}",
+        now ? std::format("on battery -> {} fps", opts_.batteryFps) : std::format("on power -> {} fps", opts_.fps));
+    for (auto& s : sessions_) {
+        if (s->streaming()) s->scheduleRestart(0.2);
+    }
 }
 
 void Controller::chooseTablet(const UsbTablet& t) {
@@ -210,6 +264,7 @@ void Controller::setDisplayAwake(bool on) {
     log("{}", on ? "display awake -> waking tablets" : "display asleep -> sleeping tablets");
     for (auto& s : sessions_)
         s->setDisplayAwake(on);
+    if (adbTool_) on ? adbTool_->wakeTablet() : adbTool_->sleepTablet();
 }
 
 void Controller::updateSpeakers() {}   // Tablet Only sound: milestone 3

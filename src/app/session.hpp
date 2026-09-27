@@ -49,6 +49,7 @@ public:
     void adaptBitrate();
     void updateCursorVisibility(platform::Point cursor, bool touchActive);
     void setDisplayAwake(bool on);
+    void placeDisplay(const std::string& position, const std::vector<platform::DisplayId>& others);
 
     platform::DisplayId displayId() const { return displayId_; }
     std::optional<platform::DisplayId> virtualDisplayId() const;

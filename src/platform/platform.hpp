@@ -128,6 +128,64 @@ public:
     virtual bool touchActive() const = 0;
 };
 
+// MARK: Menu bar / tray
+
+/// One entry in the menu, rebuilt each time it opens (the platform draws it).
+struct MenuItem {
+    enum class Kind { Action, Label, Separator, Submenu };
+    Kind kind = Kind::Action;
+    std::string title;
+    bool checked = false;
+    bool enabled = true;
+    bool bold = false;
+    std::string key; // keyboard shortcut, e.g. "q"
+    std::function<void()> action;
+    std::vector<MenuItem> children;
+
+    static MenuItem item(std::string title, std::function<void()> action, bool checked = false, bool enabled = true) {
+        return {Kind::Action, std::move(title), checked, enabled, false, {}, std::move(action), {}};
+    }
+    static MenuItem label(std::string title, bool bold = false) {
+        return {Kind::Label, std::move(title), false, false, bold, {}, {}, {}};
+    }
+    static MenuItem separator() { return {Kind::Separator, {}, false, true, false, {}, {}, {}}; }
+    static MenuItem submenu(std::string title, std::vector<MenuItem> children) {
+        return {Kind::Submenu, std::move(title), false, true, false, {}, {}, std::move(children)};
+    }
+};
+
+enum class TrayState { Idle, Streaming, Warning };
+
+class Tray {
+public:
+    /// `build` makes the menu each time it opens (main thread).
+    static std::unique_ptr<Tray> create(std::function<std::vector<MenuItem>()> build);
+    virtual ~Tray() = default;
+    virtual void setState(TrayState state) = 0;
+};
+
+/// A modal question; true for the first button.
+bool ask(const std::string& title, const std::string& message, const std::string& ok, const std::string& cancel);
+void openFile(const std::string& path);
+
+// MARK: System events
+
+struct SystemEvents {
+    std::function<void(bool awake)> displayPower; // the screens slept or woke
+    std::function<void()> screensChanged;         // displays added, removed or rearranged
+    std::function<void()> willQuit;
+};
+void watchSystem(SystemEvents events);
+bool onBattery();
+
+bool loginItemEnabled();
+void setLoginItem(bool enabled);
+
+/// Run a program and return what it printed (stdout and stderr); empty if it can't start.
+std::string runProcess(const std::string& path, const std::vector<std::string>& args);
+bool isExecutable(const std::string& path);
+std::string homeDirectory();
+
 // MARK: System
 
 bool screenRecordingAllowed();

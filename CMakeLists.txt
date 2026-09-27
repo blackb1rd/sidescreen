@@ -56,12 +56,15 @@ if(APPLE)
     src/platform/mac/capture.cpp
     src/platform/mac/display.cpp
     src/platform/mac/encoder.cpp
+    src/platform/mac/events.cpp
     src/platform/mac/pointer.cpp
     src/platform/mac/system.cpp
+    src/platform/mac/tray.cpp
+    src/platform/posix/process.cpp
   )
   target_link_libraries(spanly_platform PUBLIC spanly_core objc
     "-framework AppKit" "-framework ApplicationServices" "-framework CoreFoundation" "-framework CoreGraphics"
-    "-framework CoreMedia" "-framework CoreVideo" "-framework Foundation" "-framework ScreenCaptureKit"
+    "-framework CoreMedia" "-framework CoreVideo" "-framework Foundation" "-framework IOKit" "-framework ScreenCaptureKit" "-framework ServiceManagement"
     "-framework SystemConfiguration" "-framework VideoToolbox")
   target_compile_options(spanly_platform PRIVATE -fblocks)
 endif()
@@ -69,7 +72,9 @@ endif()
 if(TARGET spanly_platform)
   add_executable(spanly
     src/app/main.cpp
+    src/app/adb.cpp
     src/app/controller.cpp
+    src/app/menu.cpp
     src/app/options.cpp
     src/app/session.cpp
     src/app/session_hello.cpp
