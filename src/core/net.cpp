@@ -4,9 +4,11 @@
 #include <set>
 
 #ifdef _WIN32
-#include <iphlpapi.h>
 #include <winsock2.h>
+// (in this order: each needs the one before)
 #include <ws2tcpip.h>
+
+#include <iphlpapi.h>
 #else
 #include <arpa/inet.h>
 #include <ifaddrs.h>

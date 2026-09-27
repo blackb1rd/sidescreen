@@ -7,8 +7,9 @@
 #include <stdexcept>
 
 #ifdef _WIN32
-#include <bcrypt.h>
 #include <windows.h>
+// (after windows.h, which defines the types it uses)
+#include <bcrypt.h>
 #else
 #include <unistd.h>
 #if defined(__APPLE__)
