@@ -50,8 +50,34 @@ if(SPANLY_SANITIZE)
   target_link_options(spanly_core PUBLIC -fsanitize=address,undefined)
 endif()
 
-add_executable(spanly src/main.cpp)
-target_link_libraries(spanly PRIVATE spanly_core)
+# The app: the shared session logic (src/app) on top of a platform backend.
+if(APPLE)
+  add_library(spanly_platform STATIC
+    src/platform/mac/capture.cpp
+    src/platform/mac/display.cpp
+    src/platform/mac/encoder.cpp
+    src/platform/mac/pointer.cpp
+    src/platform/mac/system.cpp
+  )
+  target_link_libraries(spanly_platform PUBLIC spanly_core objc
+    "-framework AppKit" "-framework ApplicationServices" "-framework CoreFoundation" "-framework CoreGraphics"
+    "-framework CoreMedia" "-framework CoreVideo" "-framework Foundation" "-framework ScreenCaptureKit"
+    "-framework SystemConfiguration" "-framework VideoToolbox")
+  target_compile_options(spanly_platform PRIVATE -fblocks)
+endif()
+
+if(TARGET spanly_platform)
+  add_executable(spanly
+    src/app/main.cpp
+    src/app/controller.cpp
+    src/app/options.cpp
+    src/app/session.cpp
+    src/app/session_hello.cpp
+    src/app/settings.cpp
+    src/app/stats.cpp
+  )
+  target_link_libraries(spanly PRIVATE spanly_platform)
+endif()
 
 # Tests: the shared protocol, crypto and flow-control rules (same vectors as the Android app).
 enable_testing()

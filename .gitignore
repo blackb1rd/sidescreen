@@ -8,3 +8,4 @@ mac/dist/
 /build
 /build-*
 /target
+/dist

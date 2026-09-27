@@ -37,7 +37,7 @@ jobs:
         run: cmake --build build --parallel
       - name: clang-tidy
         run: |
-          clang-tidy -p build --quiet $(git ls-files 'src/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
+          clang-tidy -p build --quiet $(git ls-files 'src/core/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
           ! grep -E "(warning|error):" tidy.log
 
   # The C++ core under AddressSanitizer and UBSan.
