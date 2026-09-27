@@ -17,8 +17,8 @@ extension TabletSession {
         }
         if c.opts.displayName != nil || c.mirroring {
             virtual = nil
-            if size.w > 0 && activeBitrate == bitrateMbps {
-                startStream()
+            if size.w > 0 {
+                followLink()
             } else {
                 size = (0, 0)
                 scheduleRestart(after: 0.1)
@@ -43,13 +43,7 @@ extension TabletSession {
             // A repeated HELLO while the display is still being set up: the pipeline
             // start will send SIZE and a keyframe when it's ready.
             guard size.w > 0 else { return }
-            if activeBitrate != bitrateMbps {
-                // New link (e.g. USB -> Wi-Fi): retune the running encoder instead of restarting.
-                activeBitrate = bitrateMbps
-                currentBitrate = bitrateMbps
-                encoder?.setBitrate(Int(bitrateMbps * 1_000_000))
-            }
-            startStream()
+            followLink() // maybe a new link (e.g. USB -> Wi-Fi)
             return
         }
         virtual = nil

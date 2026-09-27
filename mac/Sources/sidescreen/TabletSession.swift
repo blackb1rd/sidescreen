@@ -24,6 +24,8 @@ final class TabletSession {
     let flow = FlowControl()
     let stats = Stats()
     private var waitingForKey = false
+    private var pixels = (w: 0, h: 0) // the captured display's size in pixels
+    private let scaler = Scaler() // capture queue only
     private let linkLock = NSLock()
     private weak var active: Link?
 
@@ -40,7 +42,13 @@ final class TabletSession {
                 self.stats.drop()
                 return
             }
-            self.encoder?.encode(pb, pts: pts)
+            guard let enc = self.encoder else { return }
+            // Right after a size change, frames of the old size are still arriving.
+            if CVPixelBufferGetWidth(pb) != enc.width || CVPixelBufferGetHeight(pb) != enc.height {
+                guard let scaled = self.scaler.scale(pb, width: enc.width, height: enc.height) else { return }
+                return enc.encode(scaled, pts: pts)
+            }
+            enc.encode(pb, pts: pts)
         }
         capture.onStop = { [weak self] in self?.scheduleRestart() }
         capture.onAudio = { [weak self] pcm in
@@ -109,30 +117,11 @@ final class TabletSession {
             }
             return
         }
-        var w = pw, h = ph
-        let opts = c.opts
-        if opts.maxWidth > 0 && w > opts.maxWidth {
-            h = h * opts.maxWidth / w
-            w = opts.maxWidth
-        }
-        // Fit within what the tablet's hardware decoder can handle (e.g. 2560x1440 on MediaTek).
-        if let hello = lastHello, hello.maxW > 0, hello.maxH > 0, w > hello.maxW || h > hello.maxH {
-            let scale = min(Double(hello.maxW) / Double(w), Double(hello.maxH) / Double(h))
-            w = Int(Double(w) * scale)
-            h = Int(Double(h) * scale)
-        }
-        w &= ~15 // whole macroblocks
-        h &= ~15
-
+        pixels = (pw, ph)
+        let (w, h) = streamSize
         let fps = currentFps
         let bitrate = bitrateMbps
-        guard let enc = Encoder(width: w, height: h, fps: fps, bitrate: Int(bitrate * 1_000_000), codec: wantedCodec)
-            ?? Encoder(width: w, height: h, fps: fps, bitrate: Int(bitrate * 1_000_000), codec: .h264)
-        else { return }
-        if opts.stats { enc.stats = stats }
-        activeBitrate = bitrate
-        currentBitrate = bitrate
-        enc.onFrame = { [weak self] data, isKey, config, started in self?.send(data, isKey: isKey, config: config, started: started) }
+        guard let enc = makeEncoder(w, h, bitrate: bitrate) else { return }
         let sizeChanged = size != (w, h)
         encoder = enc
         displayID = id
@@ -159,6 +148,55 @@ final class TabletSession {
                 scheduleRestart(after: 3)
             }
         }
+    }
+
+    /// The size to encode at: the display's pixels, within the tablet's decoder limits, and
+    /// smaller on Wi-Fi (fewer pixels at a Wi-Fi bitrate: smoother, with less lag).
+    private var streamSize: (Int, Int) {
+        var (w, h) = pixels
+        func fit(_ maxW: Int, _ maxH: Int) {
+            guard maxW > 0, maxH > 0, w > maxW || h > maxH else { return }
+            let scale = min(Double(maxW) / Double(w), Double(maxH) / Double(h))
+            w = Int(Double(w) * scale)
+            h = Int(Double(h) * scale)
+        }
+        if c.opts.maxWidth > 0 { fit(c.opts.maxWidth, Int.max) }
+        // Fit within what the tablet's hardware decoder can handle (e.g. 2560x1440 on MediaTek).
+        if let hello = lastHello { fit(hello.maxW, hello.maxH) }
+        if onWifi { fit(TabletSession.wifiLongSide, TabletSession.wifiLongSide) }
+        return (w & ~15, h & ~15) // whole macroblocks
+    }
+
+    static let wifiLongSide = 1280
+
+    private func makeEncoder(_ w: Int, _ h: Int, bitrate: Double) -> Encoder? {
+        let fps = currentFps
+        guard let enc = Encoder(width: w, height: h, fps: fps, bitrate: Int(bitrate * 1_000_000), codec: wantedCodec)
+            ?? Encoder(width: w, height: h, fps: fps, bitrate: Int(bitrate * 1_000_000), codec: .h264)
+        else { return nil }
+        if c.opts.stats { enc.stats = stats }
+        activeBitrate = bitrate
+        currentBitrate = bitrate
+        enc.onFrame = { [weak self] data, isKey, config, started in self?.send(data, isKey: isKey, config: config, started: started) }
+        return enc
+    }
+
+    /// The tablet moved to another link (e.g. the cable came out): new bitrate, and a new stream
+    /// size if that link wants one. Capture keeps running and is resized in place, so the
+    /// picture carries on at once.
+    func followLink() {
+        let (w, h) = streamSize
+        if size != (w, h), pixels.w > 0, let enc = makeEncoder(w, h, bitrate: bitrateMbps) {
+            encoder = enc
+            size = (w, h)
+            Task { await capture.resize(width: w, height: h) }
+            log("\(name): streaming at \(w)x\(h), \(bitrateMbps) Mbit/s over \(onUsb ? "USB" : onWifi ? "Wi-Fi" : "adb")")
+        } else if activeBitrate != bitrateMbps {
+            activeBitrate = bitrateMbps
+            currentBitrate = bitrateMbps
+            encoder?.setBitrate(Int(bitrateMbps * 1_000_000))
+        }
+        startStream()
     }
 
     func scheduleRestart(after delay: Double = 1) {
@@ -219,8 +257,13 @@ final class TabletSession {
     }
 
     /// Starting (and highest) bitrate for the current link; adaptive bitrate may go lower.
-    /// USB carries ~55 Mbit/s before frames back up (measured on a Redmi Pad 2 with full-screen noise).
+    /// Starting bitrate for the current link. USB carries ~55 Mbit/s before frames back up
+    /// (measured on a Redmi Pad 2 with full-screen noise).
     var bitrateMbps: Double { c.opts.bitrateMbps ?? (onUsb ? 40 : onWifi ? 12 : 6) }
+
+    /// Adaptive bitrate may climb this high while latency stays low: Wi-Fi varies from a
+    /// crowded 2.4 GHz channel to fast 5 GHz, so it starts low and finds its level.
+    private var maxBitrateMbps: Double { c.opts.bitrateMbps ?? (onWifi ? 30 : bitrateMbps) }
 
     /// Every second: lower the bitrate when frames queue up or latency climbs, and creep back
     /// up when the link has headroom. Matters most on Wi-Fi.
@@ -232,7 +275,7 @@ final class TabletSession {
         if w.skipped > (w.acks + w.skipped) / 5 || w.avgLatencyMs > 90 {
             target = max(3, currentBitrate * 0.75)
         } else if w.skipped == 0 && w.avgLatencyMs < 60 {
-            target = min(bitrateMbps, currentBitrate * 1.1)
+            target = min(maxBitrateMbps, currentBitrate * 1.1)
         }
         guard abs(target - currentBitrate) >= 0.5 else { return }
         currentBitrate = target

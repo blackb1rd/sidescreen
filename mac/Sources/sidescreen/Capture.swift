@@ -52,6 +52,14 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
         Task { try? await stream.updateConfiguration(config) }
     }
 
+    /// Capture at another size without stopping (the stream moved to a different link).
+    func resize(width: Int, height: Int) async {
+        guard let stream, let config else { return }
+        config.width = width
+        config.height = height
+        try? await stream.updateConfiguration(config)
+    }
+
     func stop() async {
         try? await stream?.stopCapture()
         stream = nil

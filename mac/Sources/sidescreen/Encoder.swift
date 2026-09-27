@@ -50,6 +50,7 @@ final class Encoder {
     private let lock = NSLock()
     private var forceKey = true
     let codec: Codec
+    let width: Int, height: Int
     var stats: Stats?
 
     /// (Annex-B access unit, isKeyframe, Annex-B parameter sets on keyframes, time the frame entered the encoder)
@@ -57,6 +58,7 @@ final class Encoder {
 
     init?(width: Int, height: Int, fps: Int, bitrate: Int, codec: Codec) {
         self.codec = codec
+        (self.width, self.height) = (width, height)
         let spec = [kVTVideoEncoderSpecification_EnableLowLatencyRateControl: true] as CFDictionary
         var s: VTCompressionSession?
         let status = VTCompressionSessionCreate(
