@@ -174,6 +174,7 @@ void Controller::wire(const std::shared_ptr<Link>& l) {
         std::scoped_lock lock(micLock_);
         if (s && s == micSession_.lock() && micPlayer_) micPlayer_->play(pcm);
     };
+    wireShare(l);
     l->onViewing = [weak](bool viewing) {
         platform::runOnMain([weak, viewing] {
             auto l = weak.lock();
@@ -204,6 +205,12 @@ void Controller::closed(const std::shared_ptr<Link>& l) {
     l->setSession(nullptr);             // a reconnect binds again with its HELLO
     if (s->link()->connected()) return; // already moved to another link
     s->setViewing(true);
+    {
+        std::unique_lock lock(shareLock_);
+        bool shown = s == shareSession_.lock();
+        lock.unlock();
+        if (shown) hideTabletScreen();
+    }
     updateSpeakers();
     updateMicrophone();
     s->scheduleTeardown();

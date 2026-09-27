@@ -137,12 +137,22 @@ T* owner(Obj self) {
     return *reinterpret_cast<T**>(reinterpret_cast<char*>(self) + ivar_getOffset(ivar));
 }
 
+/// A new instance of a ClassBuilder class pointing to `cppObject`; initialised with -init unless
+/// `init` is false (the caller then sends its own initializer, e.g. -initWithFrame:).
 template <class T>
-Obj instance(Class cls, T* cppObject) {
-    Obj o = send(reinterpret_cast<Obj>(class_createInstance(cls, 0)), "init");
+Obj instance(Class cls, T* cppObject, bool init = true) {
+    auto o = reinterpret_cast<Obj>(class_createInstance(cls, 0));
     Ivar ivar = class_getInstanceVariable(cls, "cpp");
     *reinterpret_cast<T**>(reinterpret_cast<char*>(o) + ivar_getOffset(ivar)) = cppObject;
-    return o;
+    return init ? send(o, "init") : o;
+}
+
+/// [super selector:args...] from a method of a ClassBuilder class.
+template <class R = void, class... Args>
+R sendSuper(Obj self, const char* selector, Args... args) {
+    objc_super sup{self, class_getSuperclass(object_getClass(self))};
+    using Fn = R (*)(objc_super*, SEL, Args...);
+    return reinterpret_cast<Fn>(objc_msgSendSuper)(&sup, sel(selector), args...);
 }
 
 } // namespace spanly::mac

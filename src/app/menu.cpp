@@ -94,6 +94,12 @@ std::vector<MenuItem> Menu::build() {
     if (!platform::accessibilityAllowed())
         m.push_back(MenuItem::item("⚠︎ Allow Accessibility (for touch)…", [] { platform::requestAccessibility(); }));
 
+    if (auto p = c_.primary(); p && p->link()->connected()) {
+        m.push_back(MenuItem::separator());
+        m.push_back(c_.sharing()
+                        ? MenuItem::item("Hide Tablet Screen", [this] { c_.hideTabletScreen(); })
+                        : MenuItem::item("Show Tablet Screen on Computer…", [this] { c_.showTabletScreen(); }));
+    }
     m.push_back(MenuItem::separator());
     m.push_back(MenuItem::submenu("Tablet", tabletItems()));
     m.push_back(MenuItem::submenu(

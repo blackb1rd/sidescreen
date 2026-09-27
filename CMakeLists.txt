@@ -61,10 +61,11 @@ if(APPLE)
     src/platform/mac/pointer.cpp
     src/platform/mac/system.cpp
     src/platform/mac/tray.cpp
+    src/platform/mac/video_window.cpp
     src/platform/posix/process.cpp
   )
   target_link_libraries(spanly_platform PUBLIC spanly_core objc
-    "-framework AppKit" "-framework ApplicationServices" "-framework AudioToolbox" "-framework CoreAudio" "-framework CoreFoundation" "-framework CoreGraphics"
+    "-framework AppKit" "-framework ApplicationServices" "-framework AudioToolbox" "-framework AVFoundation" "-framework QuartzCore" "-framework CoreAudio" "-framework CoreFoundation" "-framework CoreGraphics"
     "-framework CoreMedia" "-framework CoreVideo" "-framework Foundation" "-framework IOKit" "-framework ScreenCaptureKit" "-framework ServiceManagement"
     "-framework SystemConfiguration" "-framework VideoToolbox")
   target_compile_options(spanly_platform PRIVATE -fblocks)
@@ -75,6 +76,7 @@ if(TARGET spanly_platform)
     src/app/main.cpp
     src/app/adb.cpp
     src/app/controller.cpp
+    src/app/controller_share.cpp
     src/app/menu.cpp
     src/app/options.cpp
     src/app/session.cpp

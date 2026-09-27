@@ -150,6 +150,32 @@ constexpr const char* kMicrophoneUid = "com.caigenix.spanly.microphone";
 bool microphoneInstalled();
 void installMicrophone(); // asks for the administrator password
 
+// MARK: The tablet's own screen
+
+/// A window showing the tablet's screen (H.264 from the tablet), turning mouse and keyboard
+/// input into taps, swipes and typing there. Main thread, except config/frame (any thread).
+class VideoWindow {
+public:
+    struct Input {
+        std::function<void(uint8_t action, float x, float y)> pointer; // 0 down, 1 move, 2 up, 3 long press
+        std::function<void(float x, float y, float dx, float dy)> scroll;
+        std::function<void(const Bytes& key)> key; // REMOTE_KEY payload: kind + data
+        std::function<void()> closed;
+    };
+    static std::unique_ptr<VideoWindow> create(const std::string& title, Input input);
+    virtual ~VideoWindow() = default;
+    virtual void show() = 0;
+    virtual void close() = 0;
+    virtual void setVideoSize(int width, int height) = 0;
+    /// Whether the tablet can be controlled from here (its accessibility service is on).
+    virtual void setControlAvailable(bool available) = 0;
+    virtual void config(const Bytes& annexB) = 0; // SPS + PPS
+    virtual void frame(const Bytes& annexB) = 0;  // one access unit
+};
+
+/// spanly:// links (e.g. from Shortcuts): called with the whole URL.
+void onOpenUrl(std::function<void(const std::string&)> handler);
+
 // MARK: Menu bar / tray
 
 /// One entry in the menu, rebuilt each time it opens (the platform draws it).

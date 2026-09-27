@@ -43,6 +43,25 @@ void watchSystem(SystemEvents events) {
     });
 }
 
+/// spanly:// links arrive as a "get URL" Apple event.
+void onOpenUrl(std::function<void(const std::string&)> handler) {
+    static std::function<void(const std::string&)> h;
+    h = std::move(handler);
+    static Class c = ClassBuilder("SpanlyUrlHandler")
+                         .method(
+                             "handleURL:withReplyEvent:",
+                             +[](Obj, SEL, Obj event, Obj) {
+                                 Obj param = send(event, "paramDescriptorForKeyword:", uint32_t('----'));
+                                 if (h && param) h(toString(send(param, "stringValue")));
+                             },
+                             "v@:@@")
+                         .build();
+    static Obj target = send(reinterpret_cast<Obj>(class_createInstance(c, 0)), "init");
+    Obj manager = send(cls("NSAppleEventManager"), "sharedAppleEventManager");
+    send<void>(manager, "setEventHandler:andSelector:forEventClass:andEventID:", target,
+               sel("handleURL:withReplyEvent:"), uint32_t('GURL'), uint32_t('GURL'));
+}
+
 bool onBattery() {
     CFTypeRef info = IOPSCopyPowerSourcesInfo();
     if (!info) return false;

@@ -58,6 +58,12 @@ public:
     void applySettings(bool recreateDisplay);
     void restartCapture();
 
+    // The tablet's own screen in a window (controller_share.cpp).
+    bool sharing() const { return window_ != nullptr; }
+    void showTabletScreen();
+    void hideTabletScreen();
+    void openUrl(const std::string& url);
+
 private:
     void wire(const std::shared_ptr<Link>& l);
     void hello(const Hello& h, const std::shared_ptr<Link>& l);
@@ -65,6 +71,7 @@ private:
     void rememberTablet();
     void every(double seconds, std::function<void()> fn);
     void checkPower();
+    void wireShare(const std::shared_ptr<Link>& l);
 
     Options opts_;
     Settings settings_;
@@ -77,6 +84,10 @@ private:
     std::shared_ptr<platform::PcmPlayer> micPlayer_; // read on link threads
     std::weak_ptr<TabletSession> micSession_;
     std::mutex micLock_;
+    std::unique_ptr<platform::VideoWindow> window_;
+    std::weak_ptr<TabletSession> shareSession_;
+    std::shared_ptr<platform::PcmPlayer> shareSound_; // the tablet's own sound, while shown
+    std::mutex shareLock_;                            // guards shareSession_ and shareSound_ for link threads
     std::vector<std::shared_ptr<TabletSession>> sessions_;
     bool onBattery_ = false;
     bool displayOn_ = true;

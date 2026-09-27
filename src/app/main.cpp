@@ -13,6 +13,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<Menu> menu;
     return platform::runApp([&] {
         controller->start();
+        platform::onOpenUrl([&](const std::string& url) { controller->openUrl(url); });
         menu = std::make_unique<Menu>(*controller);
         menu->onboardIfNeeded();
     });
