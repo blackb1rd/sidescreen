@@ -65,6 +65,9 @@ whether to open SideScreen for the USB accessory; tick **Always**.
 
 The log is at `~/Library/Logs/SideScreen.log`.
 
+Two tablets at once: plug one in and connect another over Wi-Fi (or both over Wi-Fi). Each gets its
+own display, placed beside the other; the Mac's sound and the microphone use the first one.
+
 With Wi-Fi allowed, unplugging the cable keeps the display: the tablet carries on over Wi-Fi
 within a few seconds, and moves back to USB when you plug in again.
 
@@ -88,14 +91,15 @@ Pointer (CGEvent) ◀──── touch / scroll / zoom ──────┘   
 
 | File | |
 |---|---|
-| `Controller.swift` (+ `+Menu`, `+Share`) | ties it together: tablet sessions, settings, adaptive bitrate |
+| `Controller.swift` (+ `+Menu`, `+Share`, `+Mic`) | listeners, matching connections to tablets, settings |
+| `TabletSession.swift` (+ `+Hello`) | one tablet: its display, capture, encoder, adaptive bitrate |
 | `FlowControl.swift` | frames in flight, ACKs, latency |
 | `VirtualScreen.swift` | the virtual display (private `CGVirtualDisplay` API), rotation |
 | `Capture.swift`, `Encoder.swift`, `AudioPCM.swift` | ScreenCaptureKit video and sound, VideoToolbox encoding |
 | `PCMPlayer.swift`, `MacSpeakers.swift`, `Microphone.swift` (+ `Controller+Mic`) | the tablet's sound and microphone on the Mac, muting the Mac for *Tablet Only* |
 | `mac/Driver/` | the "SideScreen Microphone" audio driver (an AudioServerPlugIn loopback device, in C) |
 | `Usb.swift` | Android Open Accessory link over libusb |
-| `WifiLink.swift`, `WifiCrypto.swift` | Bonjour + encrypted Wi-Fi link |
+| `WifiLink.swift`, `WifiCrypto.swift` | Bonjour + encrypted Wi-Fi links |
 | `Server.swift`, `Adb.swift` | TCP fallback through `adb reverse` |
 | `TabletWindow.swift` | the tablet's own screen in a Mac window, and input back to it |
 | `Protocol.swift` | message framing ([PROTOCOL.md](PROTOCOL.md)) |

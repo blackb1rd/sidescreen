@@ -4,14 +4,14 @@ import CGVirtualDisplay
 // MARK: - Virtual display
 
 /// A display that exists only while SideScreen needs it (private CGVirtualDisplay API).
-/// A fixed serial number lets macOS remember where you arranged it.
+/// A fixed serial number per tablet lets macOS remember where you arranged each one.
 final class VirtualScreen {
     private let display: CGVirtualDisplay
     private(set) var tabletW: Int
     private(set) var tabletH: Int
     let hiDPI: Bool
 
-    init?(tabletW: Int, tabletH: Int, dpi: Int, hiDPI: Bool) {
+    init?(tabletW: Int, tabletH: Int, dpi: Int, hiDPI: Bool, serial: UInt32 = 1) {
         let d = CGVirtualDisplayDescriptor()
         d.queue = DispatchQueue.main
         d.name = "SideScreen"
@@ -24,7 +24,7 @@ final class VirtualScreen {
         d.sizeInMillimeters = CGSize(width: mm(tabletW), height: mm(tabletH))
         d.vendorID = 0x5344 // "SD"
         d.productID = 0x0001
-        d.serialNum = 0x0001
+        d.serialNum = serial
         d.terminationHandler = { _, _ in log("virtual display terminated") }
         guard let v = CGVirtualDisplay(descriptor: d) else { return nil }
 
@@ -71,17 +71,19 @@ final class VirtualScreen {
         CGDisplaySetDisplayMode(displayID, mode, nil)
     }
 
-    /// Move the display next to the main one; macOS saves it like a manual arrangement.
-    func place(_ position: String) {
+    /// Move the display next to the main one (beyond `others`, the other tablets' displays);
+    /// macOS saves it like a manual arrangement.
+    func place(_ position: String, others: [CGDirectDisplayID] = []) {
         guard position != "keep" else { return }
         let main = CGDisplayBounds(CGMainDisplayID())
+        let taken = others.filter { $0 != displayID }.map { CGDisplayBounds($0) }.reduce(main) { $0.union($1) }
         let me = CGDisplayBounds(displayID)
         let origin: CGPoint
         switch position {
-        case "left": origin = CGPoint(x: main.minX - me.width, y: main.minY)
-        case "above": origin = CGPoint(x: main.midX - me.width / 2, y: main.minY - me.height)
-        case "below": origin = CGPoint(x: main.midX - me.width / 2, y: main.maxY)
-        default: origin = CGPoint(x: main.maxX, y: main.minY)
+        case "left": origin = CGPoint(x: taken.minX - me.width, y: main.minY)
+        case "above": origin = CGPoint(x: main.midX - me.width / 2, y: taken.minY - me.height)
+        case "below": origin = CGPoint(x: main.midX - me.width / 2, y: taken.maxY)
+        default: origin = CGPoint(x: taken.maxX, y: main.minY)
         }
         if me.origin == origin { return }
         var config: CGDisplayConfigRef?

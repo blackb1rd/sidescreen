@@ -76,7 +76,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         let symbol: String
         if !Permissions.allGranted {
             symbol = "exclamationmark.triangle"
-        } else if controller.streamStatus != nil {
+        } else if !controller.streamStatus.isEmpty {
             symbol = "rectangle.fill.on.rectangle.fill"
         } else {
             symbol = "rectangle.on.rectangle"
@@ -93,13 +93,15 @@ final class MenuBar: NSObject, NSMenuDelegate {
         let settings = controller.settings
 
         // Status
-        if let s = controller.streamStatus {
+        let streams = controller.streamStatus
+        for s in streams {
             menu.addItem(label("Streaming to \(s.tablet)", bold: true))
             menu.addItem(label(s.detail))
-        } else if controller.chosenSerial != nil {
+        }
+        if streams.isEmpty, controller.chosenSerial != nil {
             menu.addItem(label("Waiting for \(settings.deviceName ?? "the tablet")", bold: true))
             menu.addItem(label("Connect it with USB; SideScreen opens on it by itself"))
-        } else {
+        } else if streams.isEmpty {
             menu.addItem(label("No tablet chosen", bold: true))
             menu.addItem(label("Connect an Android tablet with USB"))
         }
@@ -114,7 +116,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
             menu.addItem(ActionItem("⚠︎ Allow Accessibility (for touch)…") { Permissions.requestAccessibility() })
         }
 
-        if controller.link.isConnected {
+        if controller.primary?.link.isConnected == true {
             menu.addItem(.separator())
             if controller.sharingTablet {
                 menu.addItem(ActionItem("Hide Tablet Screen") { [weak self] in self?.controller.hideTabletScreen() })

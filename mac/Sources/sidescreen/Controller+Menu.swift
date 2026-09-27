@@ -2,12 +2,12 @@ import Foundation
 
 /// What the menu bar reads and changes. Main thread only.
 extension Controller {
-    /// The tablet's name and a short description of the stream, or nil when not streaming.
-    var streamStatus: (tablet: String, detail: String)? {
-        guard link.isConnected, encoder != nil, size.w > 0 else { return nil }
-        let name = usb?.connected?.name ?? settings.deviceName ?? "tablet"
-        let codec = encoder?.codec == .hevc ? "HEVC" : "H.264"
-        return (name, "\(size.w)×\(size.h) · \(codec) · \(onUsb ? "USB" : onWifi ? "Wi-Fi" : "adb (slower)")")
+    /// Each streaming tablet's name and a short description of its stream.
+    var streamStatus: [(tablet: String, detail: String)] {
+        sessions.filter { $0.streaming && $0.size.w > 0 }.map { s in
+            let codec = s.encoder?.codec == .hevc ? "HEVC" : "H.264"
+            return (s.name, "\(s.size.w)×\(s.size.h) · \(codec) · \(s.onUsb ? "USB" : s.onWifi ? "Wi-Fi" : "adb (slower)")")
+        }
     }
 
     var tablets: [UsbTablet] { usb?.tablets() ?? [] }
@@ -33,33 +33,20 @@ extension Controller {
         log("Wi-Fi pairing reset")
     }
 
-    /// Restart capture with the current settings (e.g. sound on/off), keeping the display.
+    /// Restart capture with the current settings (e.g. sound on/off), keeping the displays.
     func restartCapture() {
-        guard encoder != nil else { return }
-        size = (0, 0) // re-send SIZE and a keyframe once capture restarts
-        scheduleRestart(after: 0.1)
+        sessions.forEach { $0.restartCapture() }
     }
 
     /// Re-apply menu settings to a running stream.
     func applySettings(recreateDisplay: Bool) {
         pointer.restoreCursor = opts.restoreCursor ?? settings.restoreCursor
         if !recreateDisplay {
-            virtual?.place(position)
+            let displays = sessions.compactMap { $0.virtual?.displayID }
+            for s in sessions { s.virtual?.place(position, others: displays) }
             return
         }
-        guard let hello = lastHello, link.isConnected else { return }
-        restartWork?.cancel()
-        Task {
-            await capture.stop()
-            await MainActor.run {
-                self.encoder = nil
-                self.virtual = nil
-                self.size = (0, 0)
-            }
-            // Give macOS a moment to remove the old display before making the new one.
-            try? await Task.sleep(for: .milliseconds(500))
-            await MainActor.run { self.hello(hello.w, hello.h, hello.dpi, hello.caps) }
-        }
+        sessions.forEach { $0.recreateDisplay() }
     }
 
     /// Remember the tablet we connected to, so it is used again without adb.

@@ -37,7 +37,7 @@ message instead of a zero-length packet.
 
 | Type | Name | Length | Payload |
 |---|---|---|---|
-| 0 | NOP | 0 | heartbeat every 0.5 s on USB, and padding |
+| 0 | NOP | 0 | heartbeat every 0.5 s (USB and Wi-Fi), and padding |
 | 1 | SIZE | 8 or 12 | width u32, height u32, codec u32 (0 = H.264, 1 = HEVC); (re)create the decoder |
 | 2 | CONFIG | 1–4096 | codec parameter sets (VPS/SPS/PPS) in Annex-B format |
 | 3 | FRAME | ≥ 6 | flags u8 (bit 0 = keyframe), frame id u32, one Annex-B access unit |
@@ -59,7 +59,7 @@ message instead of a zero-length packet.
 |---|---|---|---|
 | 0 | NOP | 0 | heartbeat every 0.5 s; on USB, silence for 3 s means the app is gone |
 | 10 | TOUCH | 9 | action u8 (0 down, 1 move, 2 up, 3 right-click), x f32, y f32 |
-| 11 | HELLO | 12–64 | screen width u32, height u32, dpi u32, capabilities u32 (bit 0 = hardware HEVC), max decode width u32, max decode height u32 |
+| 11 | HELLO | 12–64 | screen width u32, height u32, dpi u32, capabilities u32 (bit 0 = hardware HEVC), max decode width u32, max decode height u32, tablet ID (16 random bytes, kept by the app), tablet name (UTF-8, ≤ 24 bytes) |
 | 12 | ACK | 4 | id of the frame just decoded (implies all earlier frames) |
 | 13 | SCROLL | 19 | kind u8 (0 fingers, 1 momentum), phase u8 (1 began, 2 changed, 4 ended), last u8 (1 = gesture over), x f32, y f32, dx f32, dy f32 |
 | 14 | ZOOM | 9 | direction i8 (+1 in, −1 out), x f32, y f32 |
@@ -87,6 +87,13 @@ are positive when the fingers move right/down.
    captures while the tablet is behind. It stops waiting after 250 ms without an ACK.
 5. A repeated **HELLO** (for example after the tablet resynchronised) makes the Mac send SIZE and a
    keyframe again.
+
+## Several tablets
+
+The tablet ID in HELLO tells the Mac which tablet a connection belongs to. Each tablet gets its
+own virtual display, capture and encoder; a tablet that moves from USB to Wi-Fi keeps its display.
+The Mac's sound, the microphone and "Show Tablet Screen" go to the first tablet connected. A
+HELLO without an ID (older apps) counts as one shared tablet.
 
 ## Rotation and mirroring
 

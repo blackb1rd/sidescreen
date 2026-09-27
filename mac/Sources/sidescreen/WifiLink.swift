@@ -2,45 +2,27 @@ import CryptoKit
 import Foundation
 import Network
 
-/// The tablet over Wi-Fi: a Bonjour-advertised TCP listener (`_sidescreen._tcp`) whose
-/// traffic is encrypted with keys derived from the secret paired over USB (WifiCrypto).
-/// Off unless "Allow Wi-Fi Connection" is on. One tablet at a time.
-final class WifiLink: Link {
+/// Tablets over Wi-Fi: a Bonjour-advertised TCP listener (`_sidescreen._tcp`) whose traffic is
+/// encrypted with keys derived from the secret paired over USB (WifiCrypto). Off unless "Allow
+/// Wi-Fi Connection" is on. Each connection is its own [WifiConnection], so several tablets can
+/// be connected at once.
+final class WifiListener {
     static let port: UInt16 = 27184
     static let serviceType = "_sidescreen._tcp"
+
+    /// A new connection, before anything is received on it: wire up its callbacks here.
+    var onConnection: ((WifiConnection) -> Void)?
 
     private let queue = DispatchQueue(label: "wifi")
     private let lock = NSLock()
     private let secret: () -> Data
     private var listener: NWListener?
-    private var session: Session?
+    private var connections: [WifiConnection] = []
     private var watchdog: DispatchSourceTimer?
-
-    /// One connection's handshake and crypto state. Touched only on `queue`.
-    private final class Session {
-        let conn: NWConnection
-        var keys: WifiCrypto.Keys?
-        var sendCounter: UInt64 = 0
-        var receiveCounter: UInt64 = 0
-        var buffer = Data()
-        var plain = Data()
-        var helloSeen = false
-        var pending = 0
-        var lastReceive = Date()
-
-        init(_ conn: NWConnection) { self.conn = conn }
-    }
 
     init(secret: @escaping () -> Data) {
         self.secret = secret
-        super.init()
     }
-
-    override var isConnected: Bool { lock.withLock { session?.helloSeen == true } }
-
-    override var backlog: Int { lock.withLock { session?.pending ?? 0 } }
-
-    // MARK: Listening
 
     func setEnabled(_ enabled: Bool) {
         queue.async {
@@ -56,8 +38,8 @@ final class WifiLink: Link {
         params.allowLocalEndpointReuse = true
         params.includePeerToPeer = true
         do {
-            let l = try NWListener(using: params, on: NWEndpoint.Port(rawValue: WifiLink.port)!)
-            l.service = NWListener.Service(name: Host.current().localizedName ?? "Mac", type: WifiLink.serviceType)
+            let l = try NWListener(using: params, on: NWEndpoint.Port(rawValue: WifiListener.port)!)
+            l.service = NWListener.Service(name: Host.current().localizedName ?? "Mac", type: WifiListener.serviceType)
             l.newConnectionHandler = { [weak self] c in self?.accept(c) }
             l.stateUpdateHandler = { state in
                 switch state {
@@ -72,7 +54,7 @@ final class WifiLink: Link {
             l.start(queue: queue)
             listener = l
             startWatchdog()
-            log("accepting paired tablets over Wi-Fi on port \(WifiLink.port)")
+            log("accepting paired tablets over Wi-Fi on port \(WifiListener.port)")
         } catch {
             log("could not listen for Wi-Fi connections: \(error)")
         }
@@ -83,90 +65,133 @@ final class WifiLink: Link {
         listener = nil
         watchdog?.cancel()
         watchdog = nil
-        if let s = lock.withLock({ session }) { close(s, reason: "Wi-Fi turned off") }
+        for c in lock.withLock({ connections }) { c.close(reason: "Wi-Fi turned off") }
     }
 
-    /// The tablet sends a heartbeat every 0.5 s; 4 s of silence means it's gone.
+    /// Heartbeats both ways every 0.5 s (an idle screen sends no frames); 4 s of silence from a
+    /// tablet means it's gone.
     private func startWatchdog() {
         let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now() + 1, repeating: 1)
+        t.schedule(deadline: .now() + 0.5, repeating: 0.5)
         t.setEventHandler { [weak self] in
-            guard let self, let s = self.lock.withLock({ self.session }),
-                  Date().timeIntervalSince(s.lastReceive) > 4 else { return }
-            self.close(s, reason: "no heartbeat")
+            guard let self else { return }
+            for c in self.lock.withLock({ self.connections }) {
+                if c.silentFor > 4 {
+                    c.close(reason: "no heartbeat")
+                } else {
+                    c.send(.nop, Data())
+                }
+            }
         }
         t.resume()
         watchdog = t
     }
 
-    // MARK: Session
-
-    private func accept(_ c: NWConnection) {
-        let s = Session(c)
-        let old = lock.withLock { () -> Session? in
-            defer { session = s }
-            return session
+    private func accept(_ nw: NWConnection) {
+        let c = WifiConnection(nw, queue: queue, secret: secret())
+        c.onClosed = { [weak self, weak c] in
+            guard let self else { return }
+            self.lock.withLock { self.connections.removeAll { $0 === c } }
         }
-        if let old { close(old, reason: "replaced by a new connection") }
-        c.stateUpdateHandler = { [weak self] state in
+        lock.withLock { connections.append(c) }
+        onConnection?(c)
+        c.start()
+    }
+}
+
+/// One tablet's encrypted Wi-Fi connection. Its state is touched only on the listener's queue,
+/// except for the counters behind `lock`.
+final class WifiConnection: Link {
+    private let conn: NWConnection
+    private let queue: DispatchQueue
+    private let secret: Data
+    private let lock = NSLock()
+    private var keys: WifiCrypto.Keys?
+    private var sendCounter: UInt64 = 0
+    private var receiveCounter: UInt64 = 0
+    private var buffer = Data()
+    private var plain = Data()
+    private var helloSeen = false
+    private var closed = false
+    private var pending = 0
+    private var lastReceive = Date()
+    var onClosed: (() -> Void)?
+
+    init(_ conn: NWConnection, queue: DispatchQueue, secret: Data) {
+        self.conn = conn
+        self.queue = queue
+        self.secret = secret
+        super.init()
+    }
+
+    override var isConnected: Bool { lock.withLock { helloSeen && !closed } }
+
+    override var backlog: Int { lock.withLock { pending } }
+
+    var silentFor: TimeInterval { Date().timeIntervalSince(lock.withLock { lastReceive }) }
+
+    func start() {
+        conn.stateUpdateHandler = { [weak self] state in
             switch state {
-            case .failed, .cancelled: self?.close(s, reason: "connection ended")
+            case .failed, .cancelled: self?.close(reason: "connection ended")
             default: break
             }
         }
-        c.start(queue: queue)
-        receive(s)
+        conn.start(queue: queue)
+        receive()
     }
 
-    private func receive(_ s: Session) {
-        s.conn.receive(minimumIncompleteLength: 1, maximumLength: 1 << 16) { [weak self] data, _, done, error in
+    private func receive() {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 1 << 16) { [weak self] data, _, done, error in
             guard let self else { return }
             if let data {
-                s.lastReceive = Date()
-                s.buffer.append(data)
-                if !self.process(s) {
-                    self.close(s, reason: "failed authentication")
+                self.lock.withLock { self.lastReceive = Date() }
+                self.buffer.append(data)
+                if !self.process() {
+                    self.close(reason: "failed authentication")
                     return
                 }
             }
             if done || error != nil {
-                self.close(s, reason: "connection ended")
+                self.close(reason: "connection ended")
                 return
             }
-            self.receive(s)
+            self.receive()
         }
     }
 
     /// Handle the handshake and any complete records. False if the peer isn't paired.
-    private func process(_ s: Session) -> Bool {
-        if s.keys == nil {
+    private func process() -> Bool {
+        if keys == nil {
             let helloSize = WifiCrypto.magic.count + WifiCrypto.nonceSize
-            guard s.buffer.count >= helloSize else { return true }
-            guard s.buffer.prefix(WifiCrypto.magic.count) == WifiCrypto.magic else { return false }
-            let clientNonce = Data(s.buffer[(s.buffer.startIndex + WifiCrypto.magic.count)..<(s.buffer.startIndex + helloSize)])
-            s.buffer = Data(s.buffer.dropFirst(helloSize))
+            guard buffer.count >= helloSize else { return true }
+            guard buffer.prefix(WifiCrypto.magic.count) == WifiCrypto.magic else { return false }
+            let clientNonce = Data(buffer[(buffer.startIndex + WifiCrypto.magic.count)..<(buffer.startIndex + helloSize)])
+            buffer = Data(buffer.dropFirst(helloSize))
             let serverNonce = WifiCrypto.randomNonce()
-            s.keys = WifiCrypto.serverKeys(secret: secret(), clientNonce: clientNonce, serverNonce: serverNonce)
-            s.conn.send(content: serverNonce, completion: .idempotent)
+            keys = WifiCrypto.serverKeys(secret: secret, clientNonce: clientNonce, serverNonce: serverNonce)
+            conn.send(content: serverNonce, completion: .idempotent)
         }
-        guard let keys = s.keys else { return true }
-        while s.buffer.count >= 4 {
-            let len = Int(s.buffer.u32(at: 0))
+        guard let keys else { return true }
+        while buffer.count >= 4 {
+            let len = Int(buffer.u32(at: 0))
             guard len <= Link.maxRecord else { return false }
-            guard s.buffer.count >= 4 + len else { break }
-            let record = Data(s.buffer[(s.buffer.startIndex + 4)..<(s.buffer.startIndex + 4 + len)])
-            s.buffer = Data(s.buffer.dropFirst(4 + len))
-            guard let plain = try? WifiCrypto.open(record, key: keys.receive, counter: s.receiveCounter) else { return false }
-            s.receiveCounter += 1
-            s.plain.append(plain)
+            guard buffer.count >= 4 + len else { break }
+            let record = Data(buffer[(buffer.startIndex + 4)..<(buffer.startIndex + 4 + len)])
+            buffer = Data(buffer.dropFirst(4 + len))
+            guard let p = try? WifiCrypto.open(record, key: keys.receive, counter: receiveCounter) else { return false }
+            receiveCounter += 1
+            plain.append(p)
         }
-        consume(&s.plain)
+        consume(&plain)
         return true
     }
 
     override func handle(_ type: UInt8, _ p: Data) {
-        if type == Msg.hello.rawValue, let s = lock.withLock({ session }), !s.helloSeen {
-            lock.withLock { s.helloSeen = true }
+        if type == Msg.hello.rawValue, lock.withLock({ () -> Bool in
+            defer { helloSeen = true }
+            return !helloSeen
+        }) {
             log("tablet connected over Wi-Fi")
             onClient?()
         }
@@ -174,32 +199,34 @@ final class WifiLink: Link {
     }
 
     override func send(_ type: Msg, _ payload: Data) {
-        guard let s = lock.withLock({ () -> Session? in
-            guard let s = session, s.helloSeen else { return nil }
-            s.pending += 1
-            return s
+        guard lock.withLock({ () -> Bool in
+            guard helloSeen, !closed else { return false }
+            pending += 1
+            return true
         }) else { return }
         queue.async { [weak self] in
-            guard let keys = s.keys else { return }
-            let sealed = WifiCrypto.seal(Link.encode(type, payload), key: keys.send, counter: s.sendCounter)
-            s.sendCounter += 1
+            guard let self, let keys = self.keys else { return }
+            let sealed = WifiCrypto.seal(Link.encode(type, payload), key: keys.send, counter: self.sendCounter)
+            self.sendCounter += 1
             var record = Data(capacity: sealed.count + 4)
             record.appendU32(UInt32(sealed.count))
             record.append(sealed)
-            s.conn.send(content: record, completion: .contentProcessed { [weak self] _ in
-                self?.lock.withLock { s.pending -= 1 }
+            self.conn.send(content: record, completion: .contentProcessed { [weak self] _ in
+                guard let self else { return }
+                self.lock.withLock { self.pending -= 1 }
             })
         }
     }
 
-    private func close(_ s: Session, reason: String) {
-        let wasCurrent = lock.withLock { () -> Bool in
-            guard session === s else { return false }
-            session = nil
-            return true
+    func close(reason: String) {
+        let (first, wasUp) = lock.withLock { () -> (Bool, Bool) in
+            defer { closed = true }
+            return (!closed, helloSeen)
         }
-        s.conn.cancel()
-        guard wasCurrent, s.helloSeen else { return }
+        guard first else { return }
+        conn.cancel()
+        onClosed?()
+        guard wasUp else { return }
         log("Wi-Fi link closed (\(reason))")
         onDisconnect?()
     }

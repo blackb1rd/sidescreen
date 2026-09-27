@@ -32,14 +32,44 @@ extension Data {
 
 let startCode: [UInt8] = [0, 0, 0, 1]
 
+/// A tablet's HELLO: its screen, decoder, and (newer apps) a stable ID telling tablets apart.
+struct Hello {
+    var w: Int, h: Int, dpi: Int, caps: UInt32
+    var maxW = 0, maxH = 0 // largest size its hardware decoder handles at 60 fps (0 = unknown)
+    var id: String? // hex of the tablet's 16-byte ID
+    var name: String? // the tablet's name, when it fits after the ID
+
+    init(w: Int, h: Int, dpi: Int, caps: UInt32) {
+        (self.w, self.h, self.dpi, self.caps) = (w, h, dpi, caps)
+    }
+
+    init(_ p: Data) {
+        self.init(w: Int(p.u32(at: 0)), h: Int(p.u32(at: 4)), dpi: Int(p.u32(at: 8)), caps: p.count >= 16 ? p.u32(at: 12) : 0)
+        if p.count >= 24 { (maxW, maxH) = (Int(p.u32(at: 16)), Int(p.u32(at: 20))) }
+        if p.count >= 40 { id = p[(p.startIndex + 24)..<(p.startIndex + 40)].map { String(format: "%02x", $0) }.joined() }
+        if p.count > 40 { name = String(decoding: p[(p.startIndex + 40)...], as: UTF8.self) }
+    }
+}
+
 // MARK: - Links
 
-/// A connection to the tablet. Subclasses: TCP through `adb reverse` ([Server]) and
-/// raw USB accessory mode ([UsbLink]). Both carry the same messages.
+/// A connection to a tablet. Subclasses: TCP through `adb reverse` ([Server]), raw USB
+/// accessory mode ([UsbLink]) and Wi-Fi ([WifiConnection]). All carry the same messages.
 class Link {
+    /// Nothing connected: sends go nowhere.
+    static let none = Link()
+
+    private let sessionLock = NSLock()
+    private weak var _session: TabletSession?
+    /// The tablet this connection belongs to (known from its HELLO).
+    var session: TabletSession? {
+        get { sessionLock.withLock { _session } }
+        set { sessionLock.withLock { _session = newValue } }
+    }
+
     var onClient: (() -> Void)?
     var onTouch: ((UInt8, Float, Float) -> Void)?
-    var onHello: ((Int, Int, Int, UInt32, Int, Int) -> Void)?
+    var onHello: ((Hello) -> Void)?
     var onDisconnect: (() -> Void)?
     var onAck: ((UInt32) -> Void)?
     /// (kind, phase, last, x, y, dx, dy) — see Pointer.scroll
@@ -148,8 +178,7 @@ class Link {
         } else if type == Msg.ack.rawValue, p.count >= 4 {
             onAck?(p.u32(at: 0))
         } else if type == Msg.hello.rawValue, p.count >= 12 {
-            onHello?(Int(p.u32(at: 0)), Int(p.u32(at: 4)), Int(p.u32(at: 8)), p.count >= 16 ? p.u32(at: 12) : 0,
-                     p.count >= 24 ? Int(p.u32(at: 16)) : 0, p.count >= 24 ? Int(p.u32(at: 20)) : 0)
+            onHello?(Hello(p))
         }
     }
 }

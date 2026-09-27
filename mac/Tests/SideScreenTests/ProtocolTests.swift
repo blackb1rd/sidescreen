@@ -6,13 +6,13 @@ import Testing
 private final class RecordingLink: Link {
     var touches: [(UInt8, Float, Float)] = []
     var acks: [UInt32] = []
-    var hellos: [(Int, Int, Int)] = []
+    var hellos: [Hello] = []
 
     override init() {
         super.init()
         onTouch = { [unowned self] a, x, y in touches.append((a, x, y)) }
         onAck = { [unowned self] id in acks.append(id) }
-        onHello = { [unowned self] w, h, dpi, _, _, _ in hellos.append((w, h, dpi)) }
+        onHello = { [unowned self] h in hellos.append(h) }
     }
 }
 
@@ -103,6 +103,20 @@ private func ack(_ id: UInt32) -> Data {
         var buf = Link.encode(.hello, p)
         link.consume(&buf)
         #expect(link.hellos.count == 1)
-        #expect(link.hellos.first?.0 == 2560 && link.hellos.first?.2 == 360)
+        let h = link.hellos.first
+        #expect(h?.w == 2560 && h?.dpi == 360 && h?.maxW == 2304 && h?.id == nil)
+    }
+
+    @Test func parsesHelloWithTabletIdAndName() {
+        let link = RecordingLink()
+        var p = Data()
+        for v: UInt32 in [1600, 2560, 360, 0, 2304, 1440] { p.appendU32(v) }
+        p.append(Data((0..<16).map { UInt8($0) }))
+        p.append(Data("Redmi Pad 2".utf8))
+        var buf = Link.encode(.hello, p)
+        link.consume(&buf)
+        let h = link.hellos.first
+        #expect(h?.id == "000102030405060708090a0b0c0d0e0f")
+        #expect(h?.name == "Redmi Pad 2")
     }
 }
