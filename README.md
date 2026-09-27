@@ -65,6 +65,10 @@ whether to open SideScreen for the USB accessory; tick **Always**.
 
 The log is at `~/Library/Logs/SideScreen.log`.
 
+No router? Turn on the tablet's hotspot and join it from the Mac: SideScreen finds the tablet
+by itself (the Mac then has no other Wi-Fi internet unless the tablet shares mobile data). If you
+use a phone's hotspot for both, set its band to 5 GHz: 2.4 GHz is several times slower.
+
 Two tablets at once: plug one in and connect another over Wi-Fi (or both over Wi-Fi). Each gets its
 own display, placed beside the other; the Mac's sound and the microphone use the first one.
 

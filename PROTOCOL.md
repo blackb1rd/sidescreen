@@ -120,7 +120,13 @@ While on USB (or adb), the tablet keeps a second connection open over Wi-Fi: it 
 NOP). When the cable comes out it sends HELLO on that connection and the stream carries on over
 Wi-Fi straight away. The Mac streams on whichever connection the tablet last sent HELLO on.
 
-A peer without the secret fails its first record and is dropped. The Mac adapts the video bitrate
+A peer without the secret fails its first record and is dropped.
+
+Finding the Mac: its Bonjour service, and a UDP **beacon** it sends every second to port 27184
+while Wi-Fi is allowed: `"SSB1"` + its name (the name from PAIR), as an IPv4 broadcast on each
+network and an IPv6 all-nodes multicast (`ff02::1`) on each interface. The beacon reaches the
+tablet where Bonjour may not, e.g. when the Mac has joined the tablet's own hotspot or on
+IPv6-only phone hotspots; the tablet connects to the address it came from. The Mac adapts the video bitrate
 to the latency it sees in ACKs, and allows 6 frames in flight on Wi-Fi.
 
 ## Showing the tablet on the Mac

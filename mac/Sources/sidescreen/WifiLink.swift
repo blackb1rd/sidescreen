@@ -19,6 +19,7 @@ final class WifiListener {
     private var listener: NWListener?
     private var connections: [WifiConnection] = []
     private var watchdog: DispatchSourceTimer?
+    private let beacon = Beacon(name: Host.current().localizedName ?? "Mac")
 
     init(secret: @escaping () -> Data) {
         self.secret = secret
@@ -54,6 +55,7 @@ final class WifiListener {
             l.start(queue: queue)
             listener = l
             startWatchdog()
+            beacon.start() // for tablets Bonjour doesn't reach (e.g. the Mac is on the tablet's hotspot)
             log("accepting paired tablets over Wi-Fi on port \(WifiListener.port)")
         } catch {
             log("could not listen for Wi-Fi connections: \(error)")
@@ -63,6 +65,7 @@ final class WifiListener {
     private func stopListening() {
         listener?.cancel()
         listener = nil
+        beacon.stop()
         watchdog?.cancel()
         watchdog = nil
         for c in lock.withLock({ connections }) { c.close(reason: "Wi-Fi turned off") }
