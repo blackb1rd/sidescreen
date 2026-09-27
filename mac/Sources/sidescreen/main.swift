@@ -27,6 +27,10 @@ do {
     log("could not listen on port \(opts.port): \(error)")
     exit(1)
 }
+MacSpeakers.restore() // in case an earlier run was stopped while muting the Mac
+NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+    MacSpeakers.restore()
+}
 controller.start()
 let menuBar = MenuBar(controller: controller)
 let urlHandler = URLHandler(controller: controller)

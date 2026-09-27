@@ -47,6 +47,8 @@ message instead of a zero-length packet.
 | 7 | PAIR | 33–288 | Wi-Fi secret (32 bytes) + the Mac's name (UTF-8); **sent only over USB** |
 | 8 | SHARE_START | 0 | please show your screen on the Mac (the user must agree on the tablet) |
 | 9 | SHARE_STOP | 0 | stop showing your screen |
+| 26 | MIC_START | 0 | send your microphone (MIC_AUDIO) — the Mac plays it into its "SideScreen Microphone" device |
+| 27 | MIC_STOP | 0 | stop sending your microphone |
 | 20 | REMOTE_POINTER | 9 | action u8 (0 down, 1 move, 2 up, 3 long press), x f32, y f32 |
 | 21 | REMOTE_SCROLL | 16 | x, y, dx, dy (f32, fractions of the tablet's screen) |
 | 22 | REMOTE_KEY | 2–258 | kind u8 + data: 0 UTF-8 text, 1 Android key code u16, 2 global action u8 (1 back, 2 home, 3 recents) |
@@ -66,6 +68,8 @@ message instead of a zero-length packet.
 | 17 | SHARE_CONFIG | 1–4096 | its SPS/PPS, Annex-B |
 | 18 | SHARE_FRAME | ≥ 2 | flags u8 (bit 0 = keyframe) + one Annex-B access unit |
 | 19 | VIEWING | 1 | 1 = the app shows the Mac's screen, 0 = it's in the background (the Mac stops encoding) |
+| 24 | SHARE_AUDIO | 4–65536 | the tablet's own sound while shared: 48 kHz 16-bit little-endian interleaved stereo PCM |
+| 25 | MIC_AUDIO | 2–65536 | the tablet's microphone: 48 kHz 16-bit little-endian mono PCM |
 | 23 | SHARE_STATUS | 2 | state u8 (0 stopped, 1 sharing, 2 declined), control u8 (1 = the tablet's control service is on) |
 
 Positions (`x`, `y`) and scroll deltas are fractions of the tablet's video view (0–1). Scroll deltas

@@ -49,6 +49,13 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resourc
 cp "$BIN" "$APP/Contents/MacOS/sidescreen"
 cp "$LIB" "$APP/Contents/Frameworks/"
 cp "$MAC/Resources/AppIcon.icns" "$APP/Contents/Resources/"
+
+# The "SideScreen Microphone" audio driver, installed from the menu when first needed.
+DRIVER="$APP/Contents/Resources/SideScreenMicrophone.driver"
+mkdir -p "$DRIVER/Contents/MacOS"
+cp "$MAC/Driver/Info.plist" "$DRIVER/Contents/"
+clang -bundle -O2 -Wall -Wextra -Wno-unused-parameter -arch arm64 -arch x86_64 -mmacosx-version-min=$MIN_MACOS \
+    -framework CoreAudio -framework CoreFoundation "$MAC"/Driver/src/*.c -o "$DRIVER/Contents/MacOS/SideScreenMicrophone"
 # Load libusb from inside the bundle, whatever path the linker recorded.
 linked=$(otool -L "$APP/Contents/MacOS/sidescreen" | awk '/libusb-1.0/ {print $1}')
 install_name_tool -change "$linked" @rpath/libusb-1.0.0.dylib "$APP/Contents/MacOS/sidescreen"
@@ -95,6 +102,12 @@ fi
 runtime=()
 [[ "$identity" == Developer\ ID* ]] && runtime=(--options runtime --timestamp)
 codesign --force --sign "$identity" "${runtime[@]}" "$APP/Contents/Frameworks/libusb-1.0.0.dylib"
+# coreaudiod only loads audio plug-ins with a trusted signature: a Developer ID, or ad-hoc.
+if [[ "$identity" == Developer\ ID* ]]; then
+    codesign --force --sign "$identity" "${runtime[@]}" "$DRIVER"
+else
+    codesign --force --sign - "$DRIVER"
+fi
 codesign --force --sign "$identity" "${runtime[@]}" --identifier dev.blackb1rd.sidescreen "$APP"
 codesign --verify --strict "$APP"
 

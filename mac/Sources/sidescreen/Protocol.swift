@@ -10,10 +10,13 @@ enum Msg: UInt8 {
     case pair = 7 // Wi-Fi pairing secret (32 bytes) + this Mac's name, sent only over USB
     case shareStart = 8, shareStop = 9 // show / stop showing the tablet's screen on the Mac
     case remotePointer = 20, remoteScroll = 21, remoteKey = 22 // Mac input on the tablet's screen
+    case micStart = 26, micStop = 27 // use the tablet's microphone as the Mac's
     case touch = 10, hello = 11, ack = 12, scroll = 13, zoom = 14, pen = 15
     case shareSize = 16, shareConfig = 17, shareFrame = 18 // the tablet's screen, H.264
     case viewing = 19 // the tablet's app shows the Mac's screen (1) or is in the background (0)
     case shareStatus = 23 // state (0 stopped, 1 sharing, 2 declined), control available
+    case shareAudio = 24 // the tablet's own sound while shared: 48 kHz 16-bit stereo PCM
+    case micAudio = 25 // the tablet's microphone: 48 kHz 16-bit mono PCM
 }
 
 extension Data {
@@ -50,6 +53,8 @@ class Link {
     var onShareConfig: ((Data) -> Void)?
     var onShareFrame: ((Data) -> Void)?
     var onShareStatus: ((UInt8, Bool) -> Void)?
+    var onShareAudio: ((Data) -> Void)?
+    var onMicAudio: ((Data) -> Void)?
 
     var isConnected: Bool { false }
 
@@ -76,6 +81,8 @@ class Link {
         case .shareConfig: return (1...4096).contains(len)
         case .shareFrame: return (2...(16 << 20)).contains(len)
         case .shareStatus: return len == 2
+        case .shareAudio: return (4...65536).contains(len) && len % 4 == 0
+        case .micAudio: return (2...65536).contains(len) && len % 2 == 0
         default: return false
         }
     }
@@ -132,6 +139,10 @@ class Link {
             onShareConfig?(p)
         } else if type == Msg.shareFrame.rawValue, p.count >= 2 {
             onShareFrame?(Data(p.dropFirst())) // flags byte, then the access unit
+        } else if type == Msg.shareAudio.rawValue {
+            onShareAudio?(p)
+        } else if type == Msg.micAudio.rawValue {
+            onMicAudio?(p)
         } else if type == Msg.shareStatus.rawValue, p.count >= 2 {
             onShareStatus?(p[p.startIndex], p[p.startIndex + 1] != 0)
         } else if type == Msg.ack.rawValue, p.count >= 4 {

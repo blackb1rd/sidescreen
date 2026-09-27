@@ -15,7 +15,9 @@ Linux, see [sidescreen-desktop](https://github.com/blackb1rd/sidescreen-desktop)
   hold or two-finger tap to right-click, pinch to zoom.
 - **Extend or mirror**: a separate second screen, or the same picture as the Mac. Turn the tablet
   and the display turns with it (portrait or landscape), keeping its windows.
-- **Pen and sound**: stylus hover and pressure, and the Mac's sound on the tablet's speakers.
+- **Pen and sound**: stylus hover and pressure; the Mac's sound on the tablet (alongside the Mac,
+  or the tablet only); the tablet's own sound on the Mac while its screen is shown there; and the
+  tablet's microphone as a Mac microphone.
 - **Wi-Fi too**: plug in once to pair, then connect wirelessly. The connection is encrypted and
   the bitrate adapts to the network.
 - **The other way round**: show the tablet's own screen in a window on the Mac, and control it
@@ -56,11 +58,15 @@ whether to open SideScreen for the USB accessory; tick **Always**.
 | Resolution | Automatic, Retina (sharpest) or Standard (lightest) |
 | Position | where the display sits next to the main screen, or leave it where you arrange it |
 | Allow Wi-Fi Connection | let tablets that were plugged in once connect wirelessly; *Forget Paired Tablets* revokes them |
-| Play Mac Sound on Tablet | send the Mac's sound to the tablet's speakers |
+| Sound | Mac Only, Mac and Tablet, or Tablet Only (mutes the Mac's speakers while connected) |
+| Use Tablet as Microphone | the tablet's mic appears on the Mac as **SideScreen Microphone** (the first time, *Install SideScreen Microphone…* adds a small audio driver and asks for your password) |
 | Return Pointer to Mac After Touch | put the pointer back on the Mac screen after each touch |
 | Open at Login, Show Log, Quit | |
 
 The log is at `~/Library/Logs/SideScreen.log`.
+
+With Wi-Fi allowed, unplugging the cable keeps the display: the tablet carries on over Wi-Fi
+within a few seconds, and moves back to USB when you plug in again.
 
 Tip: in System Settings → Desktop & Dock, set *Click wallpaper to reveal desktop* to *Only in
 Stage Manager*, or a tap on an empty part of the tablet hides all your windows.
@@ -86,6 +92,8 @@ Pointer (CGEvent) ◀──── touch / scroll / zoom ──────┘   
 | `FlowControl.swift` | frames in flight, ACKs, latency |
 | `VirtualScreen.swift` | the virtual display (private `CGVirtualDisplay` API), rotation |
 | `Capture.swift`, `Encoder.swift`, `AudioPCM.swift` | ScreenCaptureKit video and sound, VideoToolbox encoding |
+| `PCMPlayer.swift`, `MacSpeakers.swift`, `Microphone.swift` (+ `Controller+Mic`) | the tablet's sound and microphone on the Mac, muting the Mac for *Tablet Only* |
+| `mac/Driver/` | the "SideScreen Microphone" audio driver (an AudioServerPlugIn loopback device, in C) |
 | `Usb.swift` | Android Open Accessory link over libusb |
 | `WifiLink.swift`, `WifiCrypto.swift` | Bonjour + encrypted Wi-Fi link |
 | `Server.swift`, `Adb.swift` | TCP fallback through `adb reverse` |

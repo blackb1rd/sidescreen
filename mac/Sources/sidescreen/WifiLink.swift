@@ -179,7 +179,7 @@ final class WifiLink: Link {
             s.pending += 1
             return s
         }) else { return }
-        queue.async {
+        queue.async { [weak self] in
             guard let keys = s.keys else { return }
             let sealed = WifiCrypto.seal(Link.encode(type, payload), key: keys.send, counter: s.sendCounter)
             s.sendCounter += 1

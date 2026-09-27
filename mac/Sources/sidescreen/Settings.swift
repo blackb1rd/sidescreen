@@ -75,10 +75,31 @@ final class Settings {
         return s
     }
 
-    /// Send the Mac's sound to the tablet's speakers.
-    var audio: Bool {
-        get { d.bool(forKey: "audio") }
-        set { d.set(newValue, forKey: "audio") }
+    enum Sound: String, CaseIterable {
+        case mac, both, tablet
+
+        var title: String {
+            switch self {
+            case .mac: return "Mac Only"
+            case .both: return "Mac and Tablet"
+            case .tablet: return "Tablet Only (mutes the Mac)"
+            }
+        }
+    }
+
+    /// Where the Mac's sound plays while a tablet is connected.
+    var sound: Sound {
+        get {
+            if let s = Sound(rawValue: d.string(forKey: "sound") ?? "") { return s }
+            return d.bool(forKey: "audio") ? .both : .mac // earlier on/off setting
+        }
+        set { d.set(newValue.rawValue, forKey: "sound") }
+    }
+
+    /// Use the tablet's microphone as "SideScreen Microphone" (needs the audio driver).
+    var tabletMicrophone: Bool {
+        get { d.bool(forKey: "tabletMicrophone") }
+        set { d.set(newValue, forKey: "tabletMicrophone") }
     }
 
     var restoreCursor: Bool {

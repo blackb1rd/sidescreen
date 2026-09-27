@@ -22,6 +22,10 @@ quit_running() {
 if [[ "${1:-}" == "--uninstall" ]]; then
     quit_running
     rm -rf "$APP"
+    if [[ -d /Library/Audio/Plug-Ins/HAL/SideScreenMicrophone.driver ]]; then
+        echo "Removing the SideScreen Microphone driver (needs your password)"
+        sudo rm -rf /Library/Audio/Plug-Ins/HAL/SideScreenMicrophone.driver && sudo killall coreaudiod
+    fi
     echo "SideScreen removed. (Remove it from Login Items in System Settings if it is still listed.)"
     exit 0
 fi

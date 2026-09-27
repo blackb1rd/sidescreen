@@ -12,6 +12,7 @@ final class Controller {
     var usb: UsbLink?
     var wifi: WifiLink!
     var tabletWindow: TabletWindow?
+    var micPlayer: PCMPlayer?
     var tabletViewing = true // read on the capture queue; a stale read just encodes one extra frame
     private var currentBitrate = 0.0 // adaptive: starts at bitrateMbps, lowered when the link struggles
     let adb: Adb?
@@ -69,6 +70,10 @@ final class Controller {
                 DispatchQueue.main.async {
                     self?.hideTabletScreen()
                     self?.tabletViewing = true
+                    if self?.link.isConnected != true {
+                        MacSpeakers.restore()
+                        self?.updateMicrophone()
+                    }
                     self?.scheduleTeardown()
                 }
             }
@@ -108,6 +113,7 @@ final class Controller {
         capture.onStop = { [weak self] in self?.scheduleRestart() }
         capture.onAudio = { [weak self] pcm in
             guard let self, self.link.isConnected else { return }
+            if self.opts.stats { self.stats.audio(pcm) }
             self.link.send(.audio, pcm)
         }
 
@@ -201,12 +207,13 @@ final class Controller {
 
         Task {
             do {
-                try await capture.start(displayID: id, width: w, height: h, fps: fps, audio: settings.audio)
+                try await capture.start(displayID: id, width: w, height: h, fps: fps, audio: settings.sound != .mac)
                 log("capturing display \(id) at \(w)x\(h) @ \(fps) fps\(onBattery ? " (on battery)" : ""), \(enc.codec), \(bitrateMbps) Mbit/s")
                 if link.isConnected {
                     if sizeChanged { sendSize() }
                     enc.requestKeyframe()
                 }
+                await MainActor.run { self.updateSpeakers(); self.updateMicrophone() }
             } catch {
                 let hint = CGPreflightScreenCaptureAccess() ? "" : " — allow SideScreen (or the terminal running it) in Screen Recording settings"
                 log("capture failed: \(error.localizedDescription)\(hint)")
@@ -255,7 +262,11 @@ final class Controller {
         switch settings.quality {
         case .retina: return true
         case .standard: return false
-        case .auto: return onUsb // Retina needs the bandwidth of the raw USB link
+        case .auto:
+            // Keep an existing display when the link changes (e.g. the cable is unplugged and the
+            // tablet carries on over Wi-Fi): rebuilding it would scatter its windows.
+            if let v = virtual { return v.hiDPI }
+            return onUsb // Retina needs the bandwidth of the raw USB link
         }
     }
 
@@ -366,12 +377,13 @@ final class Controller {
             // A repeated HELLO while the display is still being set up: the pipeline
             // start will send SIZE and a keyframe when it's ready.
             guard size.w > 0 else { return }
-            if activeBitrate == bitrateMbps {
-                startStream()
-            } else {
-                size = (0, 0) // re-send SIZE once the encoder restarts with the new bitrate
-                scheduleRestart(after: 0.1)
+            if activeBitrate != bitrateMbps {
+                // New link (e.g. USB -> Wi-Fi): retune the running encoder instead of restarting.
+                activeBitrate = bitrateMbps
+                currentBitrate = bitrateMbps
+                encoder?.setBitrate(Int(bitrateMbps * 1_000_000))
             }
+            startStream()
             return
         }
         virtual = nil
@@ -424,7 +436,18 @@ final class Controller {
         if viewing && encoder != nil { startStream() }
     }
 
+    /// "Tablet Only" sound mutes the Mac while it is streaming to a tablet.
+    func updateSpeakers() {
+        if settings.sound == .tablet && link.isConnected && encoder != nil {
+            MacSpeakers.mute()
+        } else {
+            MacSpeakers.restore()
+        }
+    }
+
     private func startStream() {
+        updateSpeakers()
+        updateMicrophone()
         flow.reset()
         flow.maxInFlight = onWifi ? 6 : 3
         sendSize()

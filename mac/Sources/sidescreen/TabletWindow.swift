@@ -98,6 +98,15 @@ final class TabletWindow: NSObject, NSWindowDelegate {
     private let hint = NSTextField(labelWithString: "")
     private let queue = DispatchQueue(label: "tablet-video", qos: .userInteractive)
     private var format: CMVideoFormatDescription? // touched only on `queue`
+    private var sound: PCMPlayer? // the tablet's own sound, touched only on `queue`
+
+    /// The tablet's own sound while its screen is shown here (48 kHz 16-bit stereo).
+    func audio(_ pcm: Data) {
+        queue.async {
+            if self.sound == nil { self.sound = PCMPlayer(channels: 2) }
+            self.sound?.play(pcm)
+        }
+    }
 
     init(title: String) {
         window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -250,5 +259,11 @@ final class TabletWindow: NSObject, NSWindowDelegate {
         return sb
     }
 
-    func windowWillClose(_ notification: Notification) { onClose?() }
+    func windowWillClose(_ notification: Notification) {
+        queue.async {
+            self.sound?.stop()
+            self.sound = nil
+        }
+        onClose?()
+    }
 }

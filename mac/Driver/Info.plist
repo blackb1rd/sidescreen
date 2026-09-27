@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleExecutable</key><string>SideScreenMicrophone</string>
+    <key>CFBundleIdentifier</key><string>dev.blackb1rd.sidescreen.microphone</string>
+    <key>CFBundleName</key><string>SideScreen Microphone</string>
+    <key>CFBundlePackageType</key><string>BNDL</string>
+    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>CFPlugInFactories</key>
+    <dict>
+        <key>7A5E5C3E-2B7F-4D5B-9E8A-5D1C0F9B6A21</key><string>SideScreen_Create</string>
+    </dict>
+    <key>CFPlugInTypes</key>
+    <dict>
+        <!-- kAudioServerPlugInTypeUUID -->
+        <key>443ABAB8-E7B3-491A-B985-BEB9187030DB</key>
+        <array><string>7A5E5C3E-2B7F-4D5B-9E8A-5D1C0F9B6A21</string></array>
+    </dict>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+</dict>
+</plist>

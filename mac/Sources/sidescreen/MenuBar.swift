@@ -152,10 +152,24 @@ final class MenuBar: NSObject, NSMenuDelegate {
             menu.addItem(label("  Tablets plugged in once can then connect wirelessly"))
             menu.addItem(ActionItem("  Forget Paired Tablets") { [weak self] in self?.controller.forgetPairedTablets() })
         }
-        menu.addItem(ActionItem("Play Mac Sound on Tablet", checked: settings.audio) { [weak self] in
-            settings.audio.toggle()
-            self?.controller.restartCapture()
-        })
+        menu.addItem(submenu("Sound", Settings.Sound.allCases.map { s in
+            ActionItem(s.title, checked: settings.sound == s) { [weak self] in
+                let capture = (settings.sound == .mac) != (s == .mac) // audio capture on/off
+                settings.sound = s
+                self?.controller.updateSpeakers()
+                if capture { self?.controller.restartCapture() }
+            }
+        }))
+        if TabletMicrophone.installed {
+            menu.addItem(ActionItem("Use Tablet as Microphone", checked: settings.tabletMicrophone) { [weak self] in
+                settings.tabletMicrophone.toggle()
+                self?.controller.updateMicrophone()
+            })
+        } else {
+            menu.addItem(ActionItem("Install SideScreen Microphone…") {
+                TabletMicrophone.install()
+            })
+        }
         menu.addItem(ActionItem("Return Pointer to Mac After Touch", checked: settings.restoreCursor) { [weak self] in
             settings.restoreCursor.toggle()
             self?.controller.applySettings(recreateDisplay: false)

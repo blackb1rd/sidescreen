@@ -33,6 +33,8 @@ extension Controller {
         }
         l.onShareConfig = { [weak self] data in self?.tabletWindow?.config(data) }
         l.onShareFrame = { [weak self] data in self?.tabletWindow?.frame(data) }
+        l.onShareAudio = { [weak self] pcm in self?.tabletWindow?.audio(pcm) }
+        l.onMicAudio = { [weak self] pcm in self?.micPlayer?.play(pcm) }
         l.onShareStatus = { [weak self] state, control in
             DispatchQueue.main.async {
                 guard let self, let win = self.tabletWindow else { return }

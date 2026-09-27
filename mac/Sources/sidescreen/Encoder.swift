@@ -17,16 +17,25 @@ final class Stats {
 
     func drop() { lock.withLock { dropped += 1 } }
 
+    private var audioPeak: Int16 = 0
+
+    /// Loudest sample sent to the tablet (to tell real sound from silence in --stats).
+    func audio(_ pcm: Data) {
+        let peak = pcm.withUnsafeBytes { $0.bindMemory(to: Int16.self).map { $0 == .min ? .max : abs($0) }.max() ?? 0 }
+        lock.withLock { audioPeak = max(audioPeak, peak) }
+    }
+
     func latency(_ ms: Double) { lock.withLock { acks += 1; latencyMs += ms; maxLatencyMs = max(maxLatencyMs, ms) } }
 
     func report(seconds: Double) -> String? {
         lock.withLock {
-            defer { frames = 0; bytes = 0; encodeMs = 0; maxEncodeMs = 0; dropped = 0; acks = 0; latencyMs = 0; maxLatencyMs = 0 }
+            defer { frames = 0; bytes = 0; encodeMs = 0; maxEncodeMs = 0; dropped = 0; acks = 0; latencyMs = 0; maxLatencyMs = 0; audioPeak = 0 }
+            if frames == 0 && audioPeak > 0 { return "audio peak \(audioPeak)" }
             guard frames > 0 else { return nil }
             return String(format: "%.0f fps, encode avg %.1f ms, glass-to-decoded avg %.1f ms / max %.1f ms, %.1f Mbit/s, %d skipped",
                           Double(frames) / seconds, encodeMs / Double(frames),
                           acks > 0 ? latencyMs / Double(acks) : 0, maxLatencyMs,
-                          Double(bytes) * 8 / seconds / 1e6, dropped)
+                          Double(bytes) * 8 / seconds / 1e6, dropped) + (audioPeak > 0 ? ", audio peak \(audioPeak)" : "")
         }
     }
 }
