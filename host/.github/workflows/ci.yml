@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libusb-1.0-0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release
+
+  # The shared core with the test-pattern source (also how to try the link on a Mac).
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install libusb pkg-config
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --features test-pattern --all-targets -- -D warnings
+      - run: cargo test --features test-pattern
+
+  file-length:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: No source file over 500 lines
+        run: |
+          long=$(find src -name '*.rs' -exec awk 'END { if (NR > 500) print FILENAME ": " NR " lines" }' {} \;)
+          if [ -n "$long" ]; then echo "$long"; exit 1; fi
