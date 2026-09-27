@@ -143,7 +143,7 @@ public:
 
 private:
     void begin(Obj content, DisplayId displayId, int width, int height, int fps, bool audio,
-               const std::function<void(const std::string&)>& done) {
+               std::function<void(const std::string&)> done) { // by value: the blocks below keep a copy
         Pool pool;
         Obj displays = send(content, "displays");
         Obj display = nullptr;
