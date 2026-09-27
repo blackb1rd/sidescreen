@@ -28,7 +28,7 @@ const STRINGS: [&str; 6] = [
     "Spanly",
     "Spanly second display",
     "1.0",
-    "https://github.com/blackb1rd/spanly",
+    "https://github.com/caigenix/spanly",
     "spanly",
 ];
 const TIMEOUT: Duration = Duration::from_secs(1);

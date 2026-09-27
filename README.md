@@ -8,8 +8,8 @@ Use an Android tablet as a second display for your PC, over a USB cable or Wi-Fi
 > and [open an issue](../../issues) with your OS, desktop, GPU and what happened.
 
 The tablet needs the **Spanly** Android app. The Mac version is
-[blackb1rd/spanly](https://github.com/blackb1rd/spanly); the wire protocol is described in
-its [PROTOCOL.md](https://github.com/blackb1rd/spanly/blob/main/PROTOCOL.md).
+[caigenix/spanly](https://github.com/caigenix/spanly); the wire protocol is described in
+its [PROTOCOL.md](https://github.com/caigenix/spanly/blob/main/PROTOCOL.md).
 
 ## Features
 

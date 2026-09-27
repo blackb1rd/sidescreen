@@ -1,5 +1,5 @@
 //! Spanly for Windows and Linux: use an Android tablet as a second display over USB or
-//! Wi-Fi. The tablet runs the Spanly app; the Mac version is github.com/blackb1rd/spanly.
+//! Wi-Fi. The tablet runs the Spanly app; the Mac version is github.com/caigenix/spanly.
 
 mod adb;
 mod backend;
