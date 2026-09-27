@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub const PORT: u16 = 27183;
-const APP: &str = "dev.blackb1rd.spanly/.MainActivity";
+const APP: &str = "com.caigenix.spanly/.MainActivity";
 
 pub struct AdbLink {
     session: Arc<Mutex<Option<Arc<Session>>>>,

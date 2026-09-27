@@ -24,7 +24,7 @@ const ANDROID_VENDORS: [u16; 22] = [
     0x0E8D, 0x1BBB, 0x17EF, 0x0B05, 0x22D9, 0x2D95, 0x2AE5, 0x29A9, 0x1949, 0x2916,
 ];
 const STRINGS: [&str; 6] = [
-    "blackb1rd",
+    "caigenix",
     "Spanly",
     "Spanly second display",
     "1.0",
