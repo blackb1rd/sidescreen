@@ -18,8 +18,8 @@ enum {
 #define kRingFrames 16384 // ~340 ms of loopback buffer; also the zero-time-stamp period
 
 #define kDeviceName "Spanly Microphone"
-#define kDeviceUID "dev.blackb1rd.spanly.microphone"
-#define kModelUID "dev.blackb1rd.spanly.microphone.model"
+#define kDeviceUID "com.caigenix.spanly.microphone"
+#define kModelUID "com.caigenix.spanly.microphone.model"
 #define kManufacturer "Spanly"
 
 extern AudioServerPlugInDriverInterface *gInterfacePtr;

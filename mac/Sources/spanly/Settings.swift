@@ -41,9 +41,14 @@ final class Settings {
     private let d = UserDefaults.standard
 
     init() {
-        // The app was called SideScreen before: carry its settings (e.g. the Wi-Fi pairing) over once.
-        if !d.bool(forKey: "migratedFromOldName"), let old = d.persistentDomain(forName: "dev.blackb1rd." + "sidescreen") {
-            for (key, value) in old where d.object(forKey: key) == nil { d.set(value, forKey: key) }
+        // Earlier names of this app (SideScreen, then Spanly under another ID): carry their settings
+        // (e.g. the Wi-Fi pairing) over once.
+        if !d.bool(forKey: "migratedFromOldName") {
+            for name in ["dev.blackb1rd.spanly", "dev.blackb1rd." + "sidescreen"] {
+                for (key, value) in d.persistentDomain(forName: name) ?? [:] where d.object(forKey: key) == nil {
+                    d.set(value, forKey: key)
+                }
+            }
         }
         d.set(true, forKey: "migratedFromOldName")
     }

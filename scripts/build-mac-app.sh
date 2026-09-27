@@ -66,7 +66,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key><string>dev.blackb1rd.spanly</string>
+    <key>CFBundleIdentifier</key><string>com.caigenix.spanly</string>
     <key>CFBundleName</key><string>Spanly</string>
     <key>CFBundleDisplayName</key><string>Spanly</string>
     <key>CFBundleExecutable</key><string>spanly</string>
@@ -81,7 +81,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <string>Spanly lets your paired tablet connect over Wi-Fi when "Allow Wi-Fi Connection" is on.</string>
     <key>CFBundleURLTypes</key>
     <array><dict>
-        <key>CFBundleURLName</key><string>dev.blackb1rd.spanly</string>
+        <key>CFBundleURLName</key><string>com.caigenix.spanly</string>
         <key>CFBundleURLSchemes</key><array><string>spanly</string></array>
     </dict></array>
     <key>NSBonjourServices</key>
@@ -108,7 +108,7 @@ if [[ "$identity" == Developer\ ID* ]]; then
 else
     codesign --force --sign - "$DRIVER"
 fi
-codesign --force --sign "$identity" "${runtime[@]}" --identifier dev.blackb1rd.spanly "$APP"
+codesign --force --sign "$identity" "${runtime[@]}" --identifier com.caigenix.spanly "$APP"
 codesign --verify --strict "$APP"
 
 (cd "$DIST" && rm -f Spanly-mac.zip && ditto -c -k --keepParent Spanly.app Spanly-mac.zip)

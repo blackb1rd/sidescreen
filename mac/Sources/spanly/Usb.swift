@@ -19,7 +19,7 @@ struct UsbTablet: Equatable {
 }
 
 final class UsbLink: Link {
-    static let manufacturer = "blackb1rd"
+    static let manufacturer = "caigenix"
     static let model = "Spanly"
 
     private static let googleVendor: UInt16 = 0x18D1

@@ -4,7 +4,7 @@ import AppKit
 /// the app's Resources, installed once with an administrator password) shows up as an input
 /// device; while "Use Tablet as Microphone" is on, the tablet's mic is played into it.
 enum TabletMicrophone {
-    static let deviceUID = "dev.blackb1rd.spanly.microphone"
+    static let deviceUID = "com.caigenix.spanly.microphone"
     static let driverName = "SpanlyMicrophone.driver"
     private static let installDir = "/Library/Audio/Plug-Ins/HAL"
     private static let oldDriverName = "SideScreen" + "Microphone.driver" // before the rename

@@ -4,7 +4,7 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleExecutable</key><string>SpanlyMicrophone</string>
-    <key>CFBundleIdentifier</key><string>dev.blackb1rd.spanly.microphone</string>
+    <key>CFBundleIdentifier</key><string>com.caigenix.spanly.microphone</string>
     <key>CFBundleName</key><string>Spanly Microphone</string>
     <key>CFBundlePackageType</key><string>BNDL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>

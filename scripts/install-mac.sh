@@ -8,13 +8,13 @@ set -euo pipefail
 
 ROOT="${0:A:h:h}"
 APP="$HOME/Applications/Spanly.app"
-OLD_AGENT="$HOME/Library/LaunchAgents/dev.blackb1rd.spanly.plist"
+OLD_AGENT="$HOME/Library/LaunchAgents/com.caigenix.spanly.plist"
 
 quit_running() {
     # Earlier versions ran as a launchd agent; the app now manages its own login item.
-    launchctl bootout "gui/$UID/dev.blackb1rd.spanly" 2>/dev/null || true
+    launchctl bootout "gui/$UID/com.caigenix.spanly" 2>/dev/null || true
     rm -f "$OLD_AGENT"
-    osascript -e 'tell application id "dev.blackb1rd.spanly" to quit' 2>/dev/null || true
+    osascript -e 'tell application id "com.caigenix.spanly" to quit' 2>/dev/null || true
     pkill -x spanly 2>/dev/null || true
     sleep 1
 }

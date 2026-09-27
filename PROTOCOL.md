@@ -3,7 +3,7 @@
 How the Mac app and the tablet app talk. The same messages are used on both transports:
 
 - **USB accessory** (preferred). The Mac switches the tablet into Android Open Accessory mode
-  (manufacturer `blackb1rd`, model `Spanly`) and exchanges bulk transfers with the app.
+  (manufacturer `caigenix`, model `Spanly`) and exchanges bulk transfers with the app.
 - **Wi-Fi** (optional). The Mac advertises `_spanly._tcp` over Bonjour on port 27184 when
   "Allow Wi-Fi Connection" is on. Traffic is encrypted, and only tablets paired over USB can
   connect (see *Wi-Fi* below).
