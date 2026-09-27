@@ -45,7 +45,7 @@ final class Controller {
     func start() {
         trusted = AXIsProcessTrusted()
         if !trusted {
-            log("touch input disabled until SideScreen (or the terminal running it) has Accessibility permission (System Settings > Privacy & Security > Accessibility)")
+            log("touch input disabled until Spanly (or the terminal running it) has Accessibility permission (System Settings > Privacy & Security > Accessibility)")
         }
         pointer.restoreCursor = opts.restoreCursor ?? settings.restoreCursor
         for l in [server, usb].compactMap({ $0 }) as [Link] { wire(l) }

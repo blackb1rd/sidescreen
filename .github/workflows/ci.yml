@@ -23,7 +23,7 @@ jobs:
       - name: Build the microphone driver
         run: |
           clang -bundle -Wall -Wextra -Werror -Wno-unused-parameter -arch arm64 -arch x86_64 \
-            -framework CoreAudio -framework CoreFoundation mac/Driver/src/*.c -o /tmp/SideScreenMicrophone
+            -framework CoreAudio -framework CoreFoundation mac/Driver/src/*.c -o /tmp/SpanlyMicrophone
 
       - name: Check file length (max 500 lines)
         run: |

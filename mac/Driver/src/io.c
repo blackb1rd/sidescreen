@@ -1,4 +1,4 @@
-// Real-time I/O: a ring buffer that the output side (SideScreen playing the tablet's
+// Real-time I/O: a ring buffer that the output side (Spanly playing the tablet's
 // microphone) writes and the input side (apps recording) reads, on one shared clock.
 #include "driver.h"
 #include <mach/mach_time.h>

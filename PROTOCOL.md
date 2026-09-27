@@ -1,10 +1,10 @@
-# SideScreen protocol
+# Spanly protocol
 
 How the Mac app and the tablet app talk. The same messages are used on both transports:
 
 - **USB accessory** (preferred). The Mac switches the tablet into Android Open Accessory mode
-  (manufacturer `blackb1rd`, model `SideScreen`) and exchanges bulk transfers with the app.
-- **Wi-Fi** (optional). The Mac advertises `_sidescreen._tcp` over Bonjour on port 27184 when
+  (manufacturer `blackb1rd`, model `Spanly`) and exchanges bulk transfers with the app.
+- **Wi-Fi** (optional). The Mac advertises `_spanly._tcp` over Bonjour on port 27184 when
   "Allow Wi-Fi Connection" is on. Traffic is encrypted, and only tablets paired over USB can
   connect (see *Wi-Fi* below).
 - **TCP through `adb reverse`** (fallback). The app connects to `127.0.0.1:27183` on the tablet,
@@ -47,7 +47,7 @@ message instead of a zero-length packet.
 | 7 | PAIR | 33–288 | Wi-Fi secret (32 bytes) + the Mac's name (UTF-8); **sent only over USB** |
 | 8 | SHARE_START | 0 | please show your screen on the Mac (the user must agree on the tablet) |
 | 9 | SHARE_STOP | 0 | stop showing your screen |
-| 26 | MIC_START | 0 | send your microphone (MIC_AUDIO) — the Mac plays it into its "SideScreen Microphone" device |
+| 26 | MIC_START | 0 | send your microphone (MIC_AUDIO) — the Mac plays it into its "Spanly Microphone" device |
 | 27 | MIC_STOP | 0 | stop sending your microphone |
 | 20 | REMOTE_POINTER | 9 | action u8 (0 down, 1 move, 2 up, 3 long press), x f32, y f32 |
 | 21 | REMOTE_SCROLL | 16 | x, y, dx, dy (f32, fractions of the tablet's screen) |
@@ -107,10 +107,10 @@ mode, the Mac streams its main display instead of a virtual one.
 1. While the tablet is connected over USB, the Mac sends **PAIR** with a random 32-byte secret.
    The tablet stores it. Plugging in is the trust step; "Forget Paired Tablets" on the Mac makes
    a new secret.
-2. The tablet finds the Mac's Bonjour service and connects over TCP. It sends `"SSW1"` and a random
+2. The tablet finds the Mac's Bonjour service and connects over TCP. It sends `"SPW1"` and a random
    16-byte nonce, and the Mac answers with its own 16-byte nonce.
 3. Both derive two keys with HKDF-SHA256 (input: the secret; salt: client nonce ‖ server nonce;
-   info `"sidescreen c2s"` and `"sidescreen s2c"`, 32 bytes each).
+   info `"spanly c2s"` and `"spanly s2c"`, 32 bytes each).
 4. Everything else is records: length u32 + AES-256-GCM(ciphertext ‖ 16-byte tag). The nonce is
    4 zero bytes followed by a big-endian u64 counter per direction. Inside the records are the
    normal messages above.
@@ -123,7 +123,7 @@ Wi-Fi straight away. The Mac streams on whichever connection the tablet last sen
 A peer without the secret fails its first record and is dropped.
 
 Finding the Mac: its Bonjour service, and a UDP **beacon** it sends every second to port 27184
-while Wi-Fi is allowed: `"SSB1"` + its name (the name from PAIR), as an IPv4 broadcast on each
+while Wi-Fi is allowed: `"SPB1"` + its name (the name from PAIR), as an IPv4 broadcast on each
 network and an IPv6 all-nodes multicast (`ff02::1`) on each interface. The beacon reaches the
 tablet where Bonjour may not, e.g. when the Mac has joined the tablet's own hotspot or on
 IPv6-only phone hotspots; the tablet connects to the address it came from. The Mac adapts the video bitrate

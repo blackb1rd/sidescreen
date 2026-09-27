@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import sidescreen
+@testable import spanly
 
 /// Records what a Link parses instead of acting on it.
 private final class RecordingLink: Link {

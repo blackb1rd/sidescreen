@@ -39,7 +39,7 @@ struct Options {
             case "--no-usb": o.usb = false
             case "-h", "--help":
                 print("""
-                usage: sidescreen [--hidpi | --standard] [--codec hevc|h264] [--position right|left|above|below|keep] [--display NAME]
+                usage: spanly [--hidpi | --standard] [--codec hevc|h264] [--position right|left|above|below|keep] [--display NAME]
                                   [--fps N] [--battery-fps N] [--bitrate MBPS] [--max-width PX] [--port N] [--stats]
                                   [--no-usb] [--no-adb] [--no-restore-cursor]
                 Options override the menu bar settings for this run only.

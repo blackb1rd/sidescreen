@@ -20,7 +20,7 @@ struct UsbTablet: Equatable {
 
 final class UsbLink: Link {
     static let manufacturer = "blackb1rd"
-    static let model = "SideScreen"
+    static let model = "Spanly"
 
     private static let googleVendor: UInt16 = 0x18D1
     private static let accessoryProducts: ClosedRange<UInt16> = 0x2D00...0x2D05
@@ -169,8 +169,8 @@ final class UsbLink: Link {
             lastSwitch[serial] = .distantFuture
             return
         }
-        let strings = [UsbLink.manufacturer, UsbLink.model, "SideScreen second display", "1.0",
-                       "https://github.com/blackb1rd/sidescreen", "sidescreen"]
+        let strings = [UsbLink.manufacturer, UsbLink.model, "Spanly second display", "1.0",
+                       "https://github.com/blackb1rd/spanly", "spanly"]
         for (i, str) in strings.enumerated() {
             var bytes = Array(str.utf8) + [0]
             _ = libusb_control_transfer(h, 0x40, 52, 0, UInt16(i), &bytes, UInt16(bytes.count), 1000)

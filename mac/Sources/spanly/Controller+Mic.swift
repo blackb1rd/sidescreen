@@ -1,6 +1,6 @@
 import Foundation
 
-/// The tablet's microphone as "SideScreen Microphone". Main thread only.
+/// The tablet's microphone as "Spanly Microphone". Main thread only.
 extension Controller {
     /// Start or stop the first tablet's microphone to match the setting and the connections.
     func updateMicrophone() {
@@ -15,12 +15,12 @@ extension Controller {
         micPlayer = nil
         guard let s = target else { return }
         guard let player = PCMPlayer(channels: 1, deviceUID: TabletMicrophone.deviceUID) else {
-            log("could not open SideScreen Microphone")
+            log("could not open Spanly Microphone")
             return
         }
         micPlayer = player
         micSession = s
         s.link.send(.micStart, Data())
-        log("using \(s.name)'s microphone as SideScreen Microphone")
+        log("using \(s.name)'s microphone as Spanly Microphone")
     }
 }

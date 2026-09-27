@@ -143,7 +143,7 @@ final class TabletSession {
                     self.c.updateMicrophone()
                 }
             } catch {
-                let hint = CGPreflightScreenCaptureAccess() ? "" : " — allow SideScreen (or the terminal running it) in Screen Recording settings"
+                let hint = CGPreflightScreenCaptureAccess() ? "" : " — allow Spanly (or the terminal running it) in Screen Recording settings"
                 log("capture failed: \(error.localizedDescription)\(hint)")
                 scheduleRestart(after: 3)
             }

@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "sidescreen",
+    name: "spanly",
     platforms: [.macOS(.v14)],
     targets: [
         .target(name: "CGVirtualDisplay", path: "Sources/CGVirtualDisplay"),
@@ -13,18 +13,18 @@ let package = Package(
             providers: [.brew(["libusb"])]
         ),
         .executableTarget(
-            name: "sidescreen",
+            name: "spanly",
             dependencies: ["CGVirtualDisplay", "CLibUSB"],
-            path: "Sources/sidescreen",
+            path: "Sources/spanly",
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("VideoToolbox"),
             ]
         ),
         .testTarget(
-            name: "SideScreenTests",
-            dependencies: ["sidescreen"],
-            path: "Tests/SideScreenTests"
+            name: "SpanlyTests",
+            dependencies: ["spanly"],
+            path: "Tests/SpanlyTests"
         ),
     ],
     swiftLanguageModes: [.v5]

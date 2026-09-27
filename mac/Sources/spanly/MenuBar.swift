@@ -62,8 +62,8 @@ final class MenuBar: NSObject, NSMenuDelegate {
         let alert = NSAlert()
         alert.messageText = "Use “\(t.name)” as a second screen?"
         alert.informativeText = """
-            SideScreen will switch it into USB accessory mode and show your Mac's second screen on it. \
-            Install the SideScreen app on the device first. You can change the device later from the menu bar.
+            Spanly will switch it into USB accessory mode and show your Mac's second screen on it. \
+            Install the Spanly app on the device first. You can change the device later from the menu bar.
             """
         alert.addButton(withTitle: "Use as Second Screen")
         alert.addButton(withTitle: "Not Now")
@@ -81,7 +81,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         } else {
             symbol = "rectangle.on.rectangle"
         }
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "SideScreen")
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Spanly")
         image?.isTemplate = true
         item.button?.image = image
     }
@@ -100,7 +100,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
         if streams.isEmpty, controller.chosenSerial != nil {
             menu.addItem(label("Waiting for \(settings.deviceName ?? "the tablet")", bold: true))
-            menu.addItem(label("Connect it with USB; SideScreen opens on it by itself"))
+            menu.addItem(label("Connect it with USB; Spanly opens on it by itself"))
         } else if streams.isEmpty {
             menu.addItem(label("No tablet chosen", bold: true))
             menu.addItem(label("Connect an Android tablet with USB"))
@@ -168,7 +168,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
                 self?.controller.updateMicrophone()
             })
         } else {
-            menu.addItem(ActionItem("Install SideScreen Microphone…") {
+            menu.addItem(ActionItem("Install Spanly Microphone…") {
                 TabletMicrophone.install()
             })
         }
@@ -188,7 +188,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         })
         menu.addItem(ActionItem("Show Log") { NSWorkspace.shared.open(logURL) })
         menu.addItem(.separator())
-        menu.addItem(ActionItem("Quit SideScreen", key: "q") { NSApp.terminate(nil) })
+        menu.addItem(ActionItem("Quit Spanly", key: "q") { NSApp.terminate(nil) })
     }
 
     private func tabletItems() -> [NSMenuItem] {

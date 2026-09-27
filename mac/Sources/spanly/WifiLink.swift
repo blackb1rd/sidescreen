@@ -2,13 +2,13 @@ import CryptoKit
 import Foundation
 import Network
 
-/// Tablets over Wi-Fi: a Bonjour-advertised TCP listener (`_sidescreen._tcp`) whose traffic is
+/// Tablets over Wi-Fi: a Bonjour-advertised TCP listener (`_spanly._tcp`) whose traffic is
 /// encrypted with keys derived from the secret paired over USB (WifiCrypto). Off unless "Allow
 /// Wi-Fi Connection" is on. Each connection is its own [WifiConnection], so several tablets can
 /// be connected at once.
 final class WifiListener {
     static let port: UInt16 = 27184
-    static let serviceType = "_sidescreen._tcp"
+    static let serviceType = "_spanly._tcp"
 
     /// A new connection, before anything is received on it: wire up its callbacks here.
     var onConnection: ((WifiConnection) -> Void)?

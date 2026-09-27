@@ -8,7 +8,7 @@ import Foundation
 /// direction. Every record is AES-256-GCM with a per-direction counter as the nonce, so a
 /// device without the secret can neither read the stream nor inject anything into it.
 enum WifiCrypto {
-    static let magic = Data("SSW1".utf8)
+    static let magic = Data("SPW1".utf8)
     static let nonceSize = 16
     static let tagSize = 16
 
@@ -28,7 +28,7 @@ enum WifiCrypto {
             HKDF<SHA256>.deriveKey(inputKeyMaterial: SymmetricKey(data: secret), salt: salt,
                                    info: Data(info.utf8), outputByteCount: 32)
         }
-        return Keys(send: derive("sidescreen s2c"), receive: derive("sidescreen c2s"))
+        return Keys(send: derive("spanly s2c"), receive: derive("spanly c2s"))
     }
 
     private static func nonce(_ counter: UInt64) -> AES.GCM.Nonce {

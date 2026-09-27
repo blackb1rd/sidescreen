@@ -2,7 +2,7 @@ import AVFoundation
 import CoreAudio
 
 /// Plays 48 kHz 16-bit PCM from the tablet: its own sound (to the Mac's speakers) or its
-/// microphone (into the "SideScreen Microphone" device). Keeps at most ~150 ms queued so it
+/// microphone (into the "Spanly Microphone" device). Keeps at most ~150 ms queued so it
 /// never drifts behind; chunks beyond that are dropped.
 final class PCMPlayer {
     private let engine = AVAudioEngine()

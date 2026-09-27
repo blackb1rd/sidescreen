@@ -1,5 +1,5 @@
 // Properties of the plug-in, its device and the device's two streams (input = what apps
-// record, output = what SideScreen plays in).
+// record, output = what Spanly plays in).
 #include "driver.h"
 
 static _Atomic int gRunning = 0; // set by io.c through SS_SetRunning

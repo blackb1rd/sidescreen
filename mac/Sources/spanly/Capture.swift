@@ -20,7 +20,7 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
     func start(displayID: CGDirectDisplayID, width: Int, height: Int, fps: Int, audio: Bool) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
-            throw NSError(domain: "sidescreen", code: 1, userInfo: [NSLocalizedDescriptionKey: "display not shareable"])
+            throw NSError(domain: "spanly", code: 1, userInfo: [NSLocalizedDescriptionKey: "display not shareable"])
         }
         let cfg = SCStreamConfiguration()
         cfg.width = width

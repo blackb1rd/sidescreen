@@ -1,4 +1,4 @@
-// SideScreen Microphone: a CoreAudio server plug-in with one loopback device. SideScreen plays
+// Spanly Microphone: a CoreAudio server plug-in with one loopback device. Spanly plays
 // the tablet's microphone into the device's output; apps record it from the device's input.
 // Loaded by coreaudiod from /Library/Audio/Plug-Ins/HAL; no kernel extension.
 #pragma once
@@ -17,10 +17,10 @@ enum {
 #define kChannels 1
 #define kRingFrames 16384 // ~340 ms of loopback buffer; also the zero-time-stamp period
 
-#define kDeviceName "SideScreen Microphone"
-#define kDeviceUID "dev.blackb1rd.sidescreen.microphone"
-#define kModelUID "dev.blackb1rd.sidescreen.microphone.model"
-#define kManufacturer "SideScreen"
+#define kDeviceName "Spanly Microphone"
+#define kDeviceUID "dev.blackb1rd.spanly.microphone"
+#define kModelUID "dev.blackb1rd.spanly.microphone.model"
+#define kManufacturer "Spanly"
 
 extern AudioServerPlugInDriverInterface *gInterfacePtr;
 extern AudioServerPlugInHostRef gHost;

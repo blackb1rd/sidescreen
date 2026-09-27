@@ -40,6 +40,14 @@ final class Settings {
 
     private let d = UserDefaults.standard
 
+    init() {
+        // The app was called SideScreen before: carry its settings (e.g. the Wi-Fi pairing) over once.
+        if !d.bool(forKey: "migratedFromOldName"), let old = d.persistentDomain(forName: "dev.blackb1rd." + "sidescreen") {
+            for (key, value) in old where d.object(forKey: key) == nil { d.set(value, forKey: key) }
+        }
+        d.set(true, forKey: "migratedFromOldName")
+    }
+
     var mode: Mode {
         get { Mode(rawValue: d.string(forKey: "mode") ?? "") ?? .extend }
         set { d.set(newValue.rawValue, forKey: "mode") }
@@ -97,7 +105,7 @@ final class Settings {
         set { d.set(newValue.rawValue, forKey: "sound") }
     }
 
-    /// Use the tablet's microphone as "SideScreen Microphone" (needs the audio driver).
+    /// Use the tablet's microphone as "Spanly Microphone" (needs the audio driver).
     var tabletMicrophone: Bool {
         get { d.bool(forKey: "tabletMicrophone") }
         set { d.set(newValue, forKey: "tabletMicrophone") }

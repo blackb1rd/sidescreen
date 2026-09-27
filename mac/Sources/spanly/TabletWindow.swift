@@ -122,7 +122,7 @@ final class TabletWindow: NSObject, NSWindowDelegate {
         hint.drawsBackground = true
         hint.alignment = .center
         hint.isHidden = true
-        hint.stringValue = "To control the tablet from here, turn on “SideScreen: control from Mac” in the tablet's Settings › Accessibility."
+        hint.stringValue = "To control the tablet from here, turn on “Spanly: control from Mac” in the tablet's Settings › Accessibility."
         hint.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(hint)
         NSLayoutConstraint.activate([

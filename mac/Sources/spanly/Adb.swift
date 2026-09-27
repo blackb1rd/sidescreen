@@ -4,7 +4,7 @@ import Foundation
 
 /// Keeps `adb reverse` alive across replugs, launches the app, and mirrors Mac sleep/wake.
 final class Adb {
-    static let appComponent = "dev.blackb1rd.sidescreen/.MainActivity"
+    static let appComponent = "dev.blackb1rd.spanly/.MainActivity"
 
     private let path: String
     private let port: UInt16

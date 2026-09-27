@@ -3,7 +3,7 @@ import CGVirtualDisplay
 
 // MARK: - Virtual display
 
-/// A display that exists only while SideScreen needs it (private CGVirtualDisplay API).
+/// A display that exists only while Spanly needs it (private CGVirtualDisplay API).
 /// A fixed serial number per tablet lets macOS remember where you arranged each one.
 final class VirtualScreen {
     private let display: CGVirtualDisplay
@@ -14,7 +14,7 @@ final class VirtualScreen {
     init?(tabletW: Int, tabletH: Int, dpi: Int, hiDPI: Bool, serial: UInt32 = 1) {
         let d = CGVirtualDisplayDescriptor()
         d.queue = DispatchQueue.main
-        d.name = "SideScreen"
+        d.name = "Spanly"
         // HiDPI twins of a mode are only offered when the backing store may be 2x the mode;
         // the long side in both directions lets the same display turn portrait later.
         let longSide = UInt32(max(tabletW, tabletH) * 2)

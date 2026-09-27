@@ -3,10 +3,10 @@ import Foundation
 
 /// Announces this Mac with a small UDP broadcast every second on each network it is on, so a
 /// tablet finds it where Bonjour doesn't reach, notably when the Mac has joined the tablet's own
-/// hotspot (no router). Payload: "SSB1" + the Mac's name, which the tablet knows from pairing.
+/// hotspot (no router). Payload: "SPB1" + the Mac's name, which the tablet knows from pairing.
 /// Runs while Wi-Fi connections are allowed.
 final class Beacon {
-    static let magic = Data("SSB1".utf8)
+    static let magic = Data("SPB1".utf8)
 
     private let queue = DispatchQueue(label: "beacon")
     private let payload: Data

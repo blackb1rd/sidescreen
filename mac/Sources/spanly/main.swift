@@ -1,4 +1,4 @@
-// SideScreen: use an Android tablet as a second Mac display over USB.
+// Spanly: use an Android tablet as a second Mac display over USB.
 //
 // A virtual display (CGVirtualDisplay) sized to the tablet is captured (ScreenCaptureKit),
 // encoded (VideoToolbox HEVC/H.264, low-latency) and sent over raw USB in Android Open
@@ -23,7 +23,7 @@ let controller: Controller
 do {
     controller = try Controller(opts)
 } catch {
-    // The port is taken: almost always another SideScreen that is already running.
+    // The port is taken: almost always another Spanly that is already running.
     log("could not listen on port \(opts.port): \(error)")
     exit(1)
 }

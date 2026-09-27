@@ -72,7 +72,7 @@ AudioServerPlugInDriverInterface *gInterfacePtr = &gInterface;
 static AudioServerPlugInDriverRef gDriverRef = &gInterfacePtr;
 
 // Named in Info.plist (CFPlugInFactories).
-void *SideScreen_Create(CFAllocatorRef allocator, CFUUIDRef requestedType) {
+void *Spanly_Create(CFAllocatorRef allocator, CFUUIDRef requestedType) {
     if (!CFEqual(requestedType, kAudioServerPlugInTypeUUID)) return NULL;
     return gDriverRef;
 }

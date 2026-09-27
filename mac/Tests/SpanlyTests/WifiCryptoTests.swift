@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 import Testing
-@testable import sidescreen
+@testable import spanly
 
 /// The same vectors are checked on Android (SecureChannelTest), so both sides must agree.
 @Suite struct WifiCryptoTests {
@@ -13,14 +13,14 @@ import Testing
 
     @Test func derivesPerDirectionKeys() {
         let keys = WifiCrypto.serverKeys(secret: secret, clientNonce: clientNonce, serverNonce: serverNonce)
-        #expect(hex(keys.receive) == "dad5e4f21f47255de3fbe0fc1523607eea3e8b80ef8044f884b03fc116f02000") // c2s
-        #expect(hex(keys.send) == "e44762191fb04c1f1075dd4b6a18c8250bf19da566626b76ad1c8a1e1cd366c1") // s2c
+        #expect(hex(keys.receive) == "7b00117bc521fd6b60ab168938a85eb36ed13daf2412cf3e81de7430c27ebf00") // c2s
+        #expect(hex(keys.send) == "870ed19deb24707f0404ce34e8bb337eaeca4c7422884fe35faa23d1b05cbb57") // s2c
     }
 
     @Test func sealMatchesTheAndroidVector() {
         let keys = WifiCrypto.serverKeys(secret: secret, clientNonce: clientNonce, serverNonce: serverNonce)
         let sealed = WifiCrypto.seal(Data("hello tablet".utf8), key: keys.send, counter: 5)
-        #expect(sealed.map { String(format: "%02x", $0) }.joined() == "82022662e775c2e0a496d1761b53c7ec67538e98813b69a8d2e73c6f")
+        #expect(sealed.map { String(format: "%02x", $0) }.joined() == "0abf9ce6e9fcb34d91cbf7019062ffe0b45bd93794ff6d3b1b1b9eb8")
     }
 
     @Test func roundTripsAndRejectsTampering() throws {

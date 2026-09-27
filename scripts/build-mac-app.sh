@@ -1,27 +1,27 @@
 #!/bin/zsh
-# Build a distributable SideScreen.app into mac/dist/ (plus a zip for GitHub releases).
+# Build a distributable Spanly.app into mac/dist/ (plus a zip for GitHub releases).
 #
 #   - universal binary (Apple silicon + Intel), macOS 14 or later
 #   - libusb compiled from source for the same targets and bundled in Contents/Frameworks
 #     (so the app does not depend on Homebrew)
 #   - signed with, in order of preference:
-#       $SIDESCREEN_SIGN_IDENTITY        e.g. "Developer ID Application: Your Name (TEAMID)"
-#       "SideScreen Local Signing"       self-signed, keeps permissions across local rebuilds
+#       $SPANLY_SIGN_IDENTITY        e.g. "Developer ID Application: Your Name (TEAMID)"
+#       "Spanly Local Signing"       self-signed, keeps permissions across local rebuilds
 #       ad-hoc                           permissions must be re-granted after each build
 #
 # A Developer ID identity also enables the hardened runtime, as notarization requires.
 # Notarize afterwards with:
-#   xcrun notarytool submit mac/dist/SideScreen-mac.zip --keychain-profile <profile> --wait
-#   xcrun stapler staple mac/dist/SideScreen.app
+#   xcrun notarytool submit mac/dist/Spanly-mac.zip --keychain-profile <profile> --wait
+#   xcrun stapler staple mac/dist/Spanly.app
 set -euo pipefail
 
-VERSION=${SIDESCREEN_VERSION:-0.1.0}
+VERSION=${SPANLY_VERSION:-0.1.0}
 LIBUSB_VERSION=1.0.30
 MIN_MACOS=14.0
 ROOT="${0:A:h:h}"
 MAC="$ROOT/mac"
 DIST="$MAC/dist"
-APP="$DIST/SideScreen.app"
+APP="$DIST/Spanly.app"
 PREFIX="$MAC/.build/libusb-$LIBUSB_VERSION-universal"
 LIB="$PREFIX/lib/libusb-1.0.0.dylib"
 
@@ -38,62 +38,62 @@ if [[ ! -f "$LIB" ]]; then
     install_name_tool -id @rpath/libusb-1.0.0.dylib "$LIB"
 fi
 
-echo "==> Building SideScreen (universal)"
+echo "==> Building Spanly (universal)"
 build=(swift build -c release --package-path "$MAC" --arch arm64 --arch x86_64)
 PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" "${build[@]}"
-BIN="$(PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" "${build[@]}" --show-bin-path)/sidescreen"
+BIN="$(PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" "${build[@]}" --show-bin-path)/spanly"
 
 echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/sidescreen"
+cp "$BIN" "$APP/Contents/MacOS/spanly"
 cp "$LIB" "$APP/Contents/Frameworks/"
 cp "$MAC/Resources/AppIcon.icns" "$APP/Contents/Resources/"
 
-# The "SideScreen Microphone" audio driver, installed from the menu when first needed.
-DRIVER="$APP/Contents/Resources/SideScreenMicrophone.driver"
+# The "Spanly Microphone" audio driver, installed from the menu when first needed.
+DRIVER="$APP/Contents/Resources/SpanlyMicrophone.driver"
 mkdir -p "$DRIVER/Contents/MacOS"
 cp "$MAC/Driver/Info.plist" "$DRIVER/Contents/"
 clang -bundle -O2 -Wall -Wextra -Wno-unused-parameter -arch arm64 -arch x86_64 -mmacosx-version-min=$MIN_MACOS \
-    -framework CoreAudio -framework CoreFoundation "$MAC"/Driver/src/*.c -o "$DRIVER/Contents/MacOS/SideScreenMicrophone"
+    -framework CoreAudio -framework CoreFoundation "$MAC"/Driver/src/*.c -o "$DRIVER/Contents/MacOS/SpanlyMicrophone"
 # Load libusb from inside the bundle, whatever path the linker recorded.
-linked=$(otool -L "$APP/Contents/MacOS/sidescreen" | awk '/libusb-1.0/ {print $1}')
-install_name_tool -change "$linked" @rpath/libusb-1.0.0.dylib "$APP/Contents/MacOS/sidescreen"
-install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/sidescreen" 2>/dev/null || true
+linked=$(otool -L "$APP/Contents/MacOS/spanly" | awk '/libusb-1.0/ {print $1}')
+install_name_tool -change "$linked" @rpath/libusb-1.0.0.dylib "$APP/Contents/MacOS/spanly"
+install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/spanly" 2>/dev/null || true
 
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key><string>dev.blackb1rd.sidescreen</string>
-    <key>CFBundleName</key><string>SideScreen</string>
-    <key>CFBundleDisplayName</key><string>SideScreen</string>
-    <key>CFBundleExecutable</key><string>sidescreen</string>
+    <key>CFBundleIdentifier</key><string>dev.blackb1rd.spanly</string>
+    <key>CFBundleName</key><string>Spanly</string>
+    <key>CFBundleDisplayName</key><string>Spanly</string>
+    <key>CFBundleExecutable</key><string>spanly</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$VERSION</string>
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>$MIN_MACOS</string>
-    <key>NSHumanReadableCopyright</key><string>SideScreen</string>
+    <key>NSHumanReadableCopyright</key><string>Spanly</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>SideScreen lets your paired tablet connect over Wi-Fi when "Allow Wi-Fi Connection" is on.</string>
+    <string>Spanly lets your paired tablet connect over Wi-Fi when "Allow Wi-Fi Connection" is on.</string>
     <key>CFBundleURLTypes</key>
     <array><dict>
-        <key>CFBundleURLName</key><string>dev.blackb1rd.sidescreen</string>
-        <key>CFBundleURLSchemes</key><array><string>sidescreen</string></array>
+        <key>CFBundleURLName</key><string>dev.blackb1rd.spanly</string>
+        <key>CFBundleURLSchemes</key><array><string>spanly</string></array>
     </dict></array>
     <key>NSBonjourServices</key>
-    <array><string>_sidescreen._tcp</string></array>
+    <array><string>_spanly._tcp</string></array>
 </dict>
 </plist>
 EOF
 
 echo "==> Signing"
-identity=${SIDESCREEN_SIGN_IDENTITY:-}
+identity=${SPANLY_SIGN_IDENTITY:-}
 if [[ -z "$identity" ]]; then
-    identity=$(security find-identity -p codesigning | awk '/"SideScreen Local Signing"/ {print $2; exit}')
+    identity=$(security find-identity -p codesigning | awk '/"Spanly Local Signing"/ {print $2; exit}')
 fi
 if [[ -z "$identity" ]]; then
     echo "   ad-hoc (Screen Recording / Accessibility must be re-granted after each build)"
@@ -108,9 +108,9 @@ if [[ "$identity" == Developer\ ID* ]]; then
 else
     codesign --force --sign - "$DRIVER"
 fi
-codesign --force --sign "$identity" "${runtime[@]}" --identifier dev.blackb1rd.sidescreen "$APP"
+codesign --force --sign "$identity" "${runtime[@]}" --identifier dev.blackb1rd.spanly "$APP"
 codesign --verify --strict "$APP"
 
-(cd "$DIST" && rm -f SideScreen-mac.zip && ditto -c -k --keepParent SideScreen.app SideScreen-mac.zip)
-lipo -archs "$APP/Contents/MacOS/sidescreen"
-echo "Built $APP and $DIST/SideScreen-mac.zip (version $VERSION)"
+(cd "$DIST" && rm -f Spanly-mac.zip && ditto -c -k --keepParent Spanly.app Spanly-mac.zip)
+lipo -archs "$APP/Contents/MacOS/spanly"
+echo "Built $APP and $DIST/Spanly-mac.zip (version $VERSION)"

@@ -1,11 +1,11 @@
 <p align="center"><img src="assets/mac-icon-1024.png" width="160" alt=""></p>
 
-# SideScreen for Mac
+# Spanly for Mac
 
 Use an Android tablet as a second display for your Mac over a USB cable, with touch.
 
-This repository is the Mac app. The tablet needs the **SideScreen** Android app. For Windows and
-Linux, see [sidescreen-desktop](https://github.com/blackb1rd/sidescreen-desktop) (beta).
+This repository is the Mac app. The tablet needs the **Spanly** Android app. For Windows and
+Linux, see [spanly-desktop](https://github.com/blackb1rd/spanly-desktop) (beta).
 
 - **Real extended display**: a virtual display sized to the tablet, Retina by default.
 - **Fast, wired**: hardware HEVC/H.264 encoding on the Mac and hardware decoding on the tablet,
@@ -27,12 +27,12 @@ Linux, see [sidescreen-desktop](https://github.com/blackb1rd/sidescreen-desktop)
 ## Requirements
 
 - macOS 14 or later, Apple silicon or Intel.
-- An Android 11+ tablet or phone with the SideScreen app.
+- An Android 11+ tablet or phone with the Spanly app.
 - A USB cable that carries data.
 
 ## Install
 
-Download `SideScreen-mac.zip` from [Releases](../../releases), unzip it and move **SideScreen** to
+Download `Spanly-mac.zip` from [Releases](../../releases), unzip it and move **Spanly** to
 Applications. Or build and install it yourself:
 
 ```sh
@@ -40,13 +40,13 @@ scripts/install-mac.sh             # build, install to ~/Applications, start
 scripts/install-mac.sh --uninstall
 ```
 
-SideScreen lives in the menu bar (no Dock icon) and opens at login. On first launch it asks for:
+Spanly lives in the menu bar (no Dock icon) and opens at login. On first launch it asks for:
 
 - **Screen Recording**: to show the Mac's screen on the tablet.
 - **Accessibility**: to turn touches into clicks and scrolls.
 
 Then connect the tablet. The Mac asks whether to use it as a second screen, and the tablet asks
-whether to open SideScreen for the USB accessory; tick **Always**.
+whether to open Spanly for the USB accessory; tick **Always**.
 
 ## Using it
 
@@ -59,13 +59,13 @@ whether to open SideScreen for the USB accessory; tick **Always**.
 | Position | where the display sits next to the main screen, or leave it where you arrange it |
 | Allow Wi-Fi Connection | (on by default) let tablets that were plugged in once connect wirelessly; *Forget Paired Tablets* revokes them |
 | Sound | Mac Only, Mac and Tablet, or Tablet Only (mutes the Mac's speakers while connected) |
-| Use Tablet as Microphone | the tablet's mic appears on the Mac as **SideScreen Microphone** (the first time, *Install SideScreen Microphone…* adds a small audio driver and asks for your password) |
+| Use Tablet as Microphone | the tablet's mic appears on the Mac as **Spanly Microphone** (the first time, *Install Spanly Microphone…* adds a small audio driver and asks for your password) |
 | Return Pointer to Mac After Touch | put the pointer back on the Mac screen after each touch |
 | Open at Login, Show Log, Quit | |
 
-The log is at `~/Library/Logs/SideScreen.log`.
+The log is at `~/Library/Logs/Spanly.log`.
 
-No router? Turn on the tablet's hotspot and join it from the Mac: SideScreen finds the tablet
+No router? Turn on the tablet's hotspot and join it from the Mac: Spanly finds the tablet
 by itself (the Mac then has no other Wi-Fi internet unless the tablet shares mobile data). If you
 use a phone's hotspot for both, set its band to 5 GHz: 2.4 GHz is several times slower.
 
@@ -79,11 +79,11 @@ when you plug in again.
 Tip: in System Settings → Desktop & Dock, set *Click wallpaper to reveal desktop* to *Only in
 Stage Manager*, or a tap on an empty part of the tablet hides all your windows.
 
-Controlling the tablet from the Mac needs **SideScreen: control from Mac** turned on once in the
+Controlling the tablet from the Mac needs **Spanly: control from Mac** turned on once in the
 tablet's Settings › Accessibility.
 
-Automation: `open sidescreen://show-tablet` and `open sidescreen://hide-tablet` (for example
-from Shortcuts). Command-line options (`SideScreen.app/Contents/MacOS/sidescreen --help`)
+Automation: `open spanly://show-tablet` and `open spanly://hide-tablet` (for example
+from Shortcuts). Command-line options (`Spanly.app/Contents/MacOS/spanly --help`)
 override the menu settings for one run, for example `--stats` to log frame rate and latency.
 
 ## How it works
@@ -102,7 +102,7 @@ Pointer (CGEvent) ◀──── touch / scroll / zoom ──────┘   
 | `VirtualScreen.swift` | the virtual display (private `CGVirtualDisplay` API), rotation |
 | `Capture.swift`, `Encoder.swift`, `AudioPCM.swift` | ScreenCaptureKit video and sound, VideoToolbox encoding |
 | `PCMPlayer.swift`, `MacSpeakers.swift`, `Microphone.swift` (+ `Controller+Mic`) | the tablet's sound and microphone on the Mac, muting the Mac for *Tablet Only* |
-| `mac/Driver/` | the "SideScreen Microphone" audio driver (an AudioServerPlugIn loopback device, in C) |
+| `mac/Driver/` | the "Spanly Microphone" audio driver (an AudioServerPlugIn loopback device, in C) |
 | `Usb.swift` | Android Open Accessory link over libusb |
 | `WifiLink.swift`, `WifiCrypto.swift` | Bonjour + encrypted Wi-Fi links |
 | `Server.swift`, `Adb.swift` | TCP fallback through `adb reverse` |
@@ -116,17 +116,17 @@ Pointer (CGEvent) ◀──── touch / scroll / zoom ──────┘   
 ```sh
 swift build --package-path mac      # needs: brew install libusb pkg-config
 swift test --package-path mac
-scripts/build-mac-app.sh            # universal SideScreen.app with libusb bundled -> mac/dist/
+scripts/build-mac-app.sh            # universal Spanly.app with libusb bundled -> mac/dist/
 python3 scripts/make-icons.py       # regenerate the icon from assets/icon-source.jpeg
 ```
 
-`build-mac-app.sh` signs with `$SIDESCREEN_SIGN_IDENTITY` (for example a Developer ID). Otherwise
-it uses a local `SideScreen Local Signing` certificate if you made one, which keeps the permissions
+`build-mac-app.sh` signs with `$SPANLY_SIGN_IDENTITY` (for example a Developer ID). Otherwise
+it uses a local `Spanly Local Signing` certificate if you made one, which keeps the permissions
 across rebuilds, or else ad-hoc signing.
 
 ## Releases
 
-Pushing a tag like `v0.2.0` builds the app on GitHub Actions and attaches `SideScreen-mac.zip` to a
+Pushing a tag like `v0.2.0` builds the app on GitHub Actions and attaches `Spanly-mac.zip` to a
 GitHub release. With these repository secrets set, it is also signed with a Developer ID and
 notarized, so it opens without Gatekeeper warnings:
 
@@ -137,7 +137,7 @@ notarized, so it opens without Gatekeeper warnings:
 | `MACOS_SIGN_IDENTITY` | e.g. `Developer ID Application: Name (TEAMID)` |
 | `NOTARY_KEY_P8`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | App Store Connect API key for notarization |
 
-SideScreen can't be on the Mac App Store: it uses the private `CGVirtualDisplay` API and needs
+Spanly can't be on the Mac App Store: it uses the private `CGVirtualDisplay` API and needs
 Accessibility access, which the App Store sandbox doesn't allow.
 
 ## License

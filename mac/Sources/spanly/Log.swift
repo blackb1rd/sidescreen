@@ -1,8 +1,8 @@
 import Foundation
 
-let logURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/SideScreen.log")
+let logURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Spanly.log")
 
-/// Logs to the terminal when run from one, otherwise to ~/Library/Logs/SideScreen.log.
+/// Logs to the terminal when run from one, otherwise to ~/Library/Logs/Spanly.log.
 private let logFile: FileHandle? = {
     guard isatty(STDOUT_FILENO) == 0 else { return nil }
     let fm = FileManager.default
