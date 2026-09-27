@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install libusb
+        run: brew install libusb pkg-config
+
+      - name: Build
+        run: swift build -c release --package-path mac
+
+      - name: Test
+        run: swift test --package-path mac
+
+      - name: Check file length (max 500 lines)
+        run: |
+          long=$(find mac/Sources mac/Tests scripts -type f \( -name '*.swift' -o -name '*.sh' -o -name '*.py' \) \
+                 -exec awk 'END { if (NR > 500) print FILENAME ": " NR " lines" }' {} \;)
+          if [ -n "$long" ]; then echo "$long"; exit 1; fi
