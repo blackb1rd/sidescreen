@@ -5,7 +5,7 @@
 Use an Android tablet as a second display for your Mac over a USB cable, with touch.
 
 This repository is the Mac app. The tablet needs the **Spanly** Android app. For Windows and
-Linux, see [spanly-desktop](https://github.com/blackb1rd/spanly-desktop) (beta).
+Linux, see [spanly-desktop](https://github.com/caigenix/spanly-desktop) (beta).
 
 - **Real extended display**: a virtual display sized to the tablet, Retina by default.
 - **Fast, wired**: hardware HEVC/H.264 encoding on the Mac and hardware decoding on the tablet,
