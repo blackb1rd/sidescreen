@@ -1,16 +1,16 @@
 // Properties of the plug-in, its device and the device's two streams (input = what apps
 // record, output = what Spanly plays in).
-#include "driver.h"
+#include "driver.hpp"
 
-static _Atomic int gRunning = 0; // set by io.c through SS_SetRunning
+static std::atomic<int> gRunning{0}; // set by io.cpp through SS_SetRunning
 
-void SS_SetRunning(int running) { atomic_store(&gRunning, running); }
+void SS_SetRunning(int running) { gRunning.store(running); }
 
 static AudioStreamBasicDescription Format(void) {
-    AudioStreamBasicDescription f = {0};
+    AudioStreamBasicDescription f = {};
     f.mSampleRate = kSampleRate;
     f.mFormatID = kAudioFormatLinearPCM;
-    f.mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
+    f.mFormatFlags = UInt32(kAudioFormatFlagIsFloat) | UInt32(kAudioFormatFlagsNativeEndian) | UInt32(kAudioFormatFlagIsPacked);
     f.mBytesPerPacket = 4 * kChannels;
     f.mFramesPerPacket = 1;
     f.mBytesPerFrame = 4 * kChannels;
@@ -163,7 +163,7 @@ static OSStatus PlugInProperty(const AudioObjectPropertyAddress *a, UInt32 qs, c
         return PutIDs(device, 1, size, used, out);
     case kAudioPlugInPropertyTranslateUIDToDevice: {
         Boolean match = qs == sizeof(CFStringRef) && CFStringCompare(*(CFStringRef *)q, CFSTR(kDeviceUID), 0) == kCFCompareEqualTo;
-        PUT(AudioObjectID, match ? kObjectDevice : kAudioObjectUnknown);
+        PUT(AudioObjectID, match ? AudioObjectID(kObjectDevice) : AudioObjectID(kAudioObjectUnknown));
         break;
     }
     default: return kAudioHardwareUnknownPropertyError;
@@ -185,7 +185,7 @@ static OSStatus DeviceProperty(const AudioObjectPropertyAddress *a, UInt32 size,
     case kAudioDevicePropertyRelatedDevices: return PutIDs(device, 1, size, used, out);
     case kAudioDevicePropertyClockDomain: PUT(UInt32, 0); break;
     case kAudioDevicePropertyDeviceIsAlive: PUT(UInt32, 1); break;
-    case kAudioDevicePropertyDeviceIsRunning: PUT(UInt32, atomic_load(&gRunning) ? 1 : 0); break;
+    case kAudioDevicePropertyDeviceIsRunning: PUT(UInt32, gRunning.load() ? 1 : 0); break;
     // A microphone: it may be the default input, but never the default output.
     case kAudioDevicePropertyDeviceCanBeDefaultDevice: PUT(UInt32, a->mScope == kAudioObjectPropertyScopeInput ? 1 : 0); break;
     case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: PUT(UInt32, 0); break;
@@ -253,12 +253,12 @@ OSStatus SS_SetPropertyData(AudioServerPlugInDriverRef d, AudioObjectID id, pid_
     if (!SS_HasProperty(d, id, pid, a)) return kAudioHardwareUnknownPropertyError;
     switch (a->mSelector) {
     case kAudioDevicePropertyNominalSampleRate:
-        return size == sizeof(Float64) && *(const Float64 *)data == kSampleRate ? noErr : kAudioDeviceUnsupportedFormatError;
+        return size == sizeof(Float64) && *(const Float64 *)data == kSampleRate ? OSStatus(noErr) : OSStatus(kAudioDeviceUnsupportedFormatError);
     case kAudioStreamPropertyVirtualFormat:
     case kAudioStreamPropertyPhysicalFormat:
         return size == sizeof(AudioStreamBasicDescription) && ((const AudioStreamBasicDescription *)data)->mSampleRate == kSampleRate
-                   ? noErr
-                   : kAudioDeviceUnsupportedFormatError;
+                   ? OSStatus(noErr)
+                   : OSStatus(kAudioDeviceUnsupportedFormatError);
     }
     return kAudioHardwareUnsupportedOperationError;
 }

@@ -53,9 +53,9 @@ cp "$MAC/Resources/AppIcon.icns" "$APP/Contents/Resources/"
 # The "Spanly Microphone" audio driver, installed from the menu when first needed.
 DRIVER="$APP/Contents/Resources/SpanlyMicrophone.driver"
 mkdir -p "$DRIVER/Contents/MacOS"
-cp "$MAC/Driver/Info.plist" "$DRIVER/Contents/"
-clang -bundle -O2 -Wall -Wextra -Wno-unused-parameter -arch arm64 -arch x86_64 -mmacosx-version-min=$MIN_MACOS \
-    -framework CoreAudio -framework CoreFoundation "$MAC"/Driver/src/*.c -o "$DRIVER/Contents/MacOS/SpanlyMicrophone"
+cp "$ROOT/src/driver/Info.plist" "$DRIVER/Contents/"
+clang++ -std=c++23 -bundle -O2 -Wall -Wextra -Wno-unused-parameter -arch arm64 -arch x86_64 -mmacosx-version-min=$MIN_MACOS \
+    -framework CoreAudio -framework CoreFoundation "$ROOT"/src/driver/*.cpp -o "$DRIVER/Contents/MacOS/SpanlyMicrophone"
 # Load libusb from inside the bundle, whatever path the linker recorded.
 linked=$(otool -L "$APP/Contents/MacOS/spanly" | awk '/libusb-1.0/ {print $1}')
 install_name_tool -change "$linked" @rpath/libusb-1.0.0.dylib "$APP/Contents/MacOS/spanly"

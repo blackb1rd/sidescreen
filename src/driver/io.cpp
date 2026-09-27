@@ -1,19 +1,19 @@
 // Real-time I/O: a ring buffer that the output side (Spanly playing the tablet's
 // microphone) writes and the input side (apps recording) reads, on one shared clock.
-#include "driver.h"
+#include "driver.hpp"
 #include <mach/mach_time.h>
 #include <string.h>
 
 void SS_SetRunning(int running);
 
-_Atomic UInt32 gIOCount = 0;
+std::atomic<UInt32> gIOCount{0};
 static Float32 gRing[kRingFrames * kChannels];
 static Float64 gTicksPerFrame = 0;
 static UInt64 gAnchorHostTime = 0;
 static UInt64 gPeriods = 0;
 
 OSStatus SS_StartIO(AudioServerPlugInDriverRef d, AudioObjectID id, UInt32 client) {
-    if (atomic_fetch_add(&gIOCount, 1) == 0) {
+    if (gIOCount.fetch_add(1) == 0) {
         mach_timebase_info_data_t tb;
         mach_timebase_info(&tb);
         Float64 hostTicksPerSecond = 1e9 * (Float64)tb.denom / (Float64)tb.numer;
@@ -29,8 +29,8 @@ OSStatus SS_StartIO(AudioServerPlugInDriverRef d, AudioObjectID id, UInt32 clien
 }
 
 OSStatus SS_StopIO(AudioServerPlugInDriverRef d, AudioObjectID id, UInt32 client) {
-    UInt32 n = atomic_load(&gIOCount);
-    if (n > 0 && atomic_fetch_sub(&gIOCount, 1) == 1) {
+    UInt32 n = gIOCount.load();
+    if (n > 0 && gIOCount.fetch_sub(1) == 1) {
         SS_SetRunning(0);
         AudioObjectPropertyAddress running = {kAudioDevicePropertyDeviceIsRunning, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
         if (gHost) gHost->PropertiesChanged(gHost, kObjectDevice, 1, &running);

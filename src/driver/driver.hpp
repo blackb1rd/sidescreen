@@ -4,7 +4,7 @@
 #pragma once
 
 #include <CoreAudio/AudioServerPlugIn.h>
-#include <stdatomic.h>
+#include <atomic>
 
 enum {
     kObjectPlugIn = kAudioObjectPlugInObject, // 1
@@ -33,7 +33,7 @@ OSStatus SS_GetPropertyData(AudioServerPlugInDriverRef, AudioObjectID, pid_t, co
 OSStatus SS_SetPropertyData(AudioServerPlugInDriverRef, AudioObjectID, pid_t, const AudioObjectPropertyAddress *, UInt32, const void *, UInt32, const void *);
 
 // io.c
-extern _Atomic UInt32 gIOCount;
+extern std::atomic<UInt32> gIOCount;
 OSStatus SS_StartIO(AudioServerPlugInDriverRef, AudioObjectID, UInt32);
 OSStatus SS_StopIO(AudioServerPlugInDriverRef, AudioObjectID, UInt32);
 OSStatus SS_GetZeroTimeStamp(AudioServerPlugInDriverRef, AudioObjectID, UInt32, Float64 *, UInt64 *, UInt64 *);

@@ -8,6 +8,7 @@ int main(int argc, char** argv) {
     using namespace spanly;
     Options opts = Options::parse(argc, argv);
     setLogFile(platform::logFilePath());
+    platform::restoreSpeakers(); // in case an earlier run stopped while muting them
     auto controller = std::make_unique<Controller>(std::move(opts));
     std::unique_ptr<Menu> menu;
     return platform::runApp([&] {

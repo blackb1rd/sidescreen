@@ -1,26 +1,24 @@
 // The plug-in's entry points: COM-style interface, factory, and the calls with nothing to do.
-#include "driver.h"
+#include "driver.hpp"
 #include <CoreFoundation/CoreFoundation.h>
 
 AudioServerPlugInHostRef gHost = NULL;
-static _Atomic UInt32 gRefCount = 0;
-static AudioServerPlugInDriverRef gDriverRef;
-
+static std::atomic<UInt32> gRefCount{0};
 static HRESULT SS_QueryInterface(void *driver, REFIID uuid, LPVOID *out) {
     CFUUIDRef requested = CFUUIDCreateFromUUIDBytes(NULL, uuid);
     Boolean ok = CFEqual(requested, IUnknownUUID) || CFEqual(requested, kAudioServerPlugInDriverInterfaceUUID);
     CFRelease(requested);
     if (!ok) return E_NOINTERFACE;
-    atomic_fetch_add(&gRefCount, 1);
-    *out = gDriverRef; // the driver ref (a pointer to the interface pointer), as COM expects
+    gRefCount.fetch_add(1);
+    *out = &gInterfacePtr; // the driver ref (a pointer to the interface pointer), as COM expects
     return S_OK;
 }
 
-static ULONG SS_AddRef(void *driver) { return atomic_fetch_add(&gRefCount, 1) + 1; }
+static ULONG SS_AddRef(void *driver) { return gRefCount.fetch_add(1) + 1; }
 
 static ULONG SS_Release(void *driver) {
-    UInt32 n = atomic_load(&gRefCount);
-    if (n > 0) n = atomic_fetch_sub(&gRefCount, 1) - 1;
+    UInt32 n = gRefCount.load();
+    if (n > 0) n = gRefCount.fetch_sub(1) - 1;
     return n;
 }
 
@@ -72,7 +70,7 @@ AudioServerPlugInDriverInterface *gInterfacePtr = &gInterface;
 static AudioServerPlugInDriverRef gDriverRef = &gInterfacePtr;
 
 // Named in Info.plist (CFPlugInFactories).
-void *Spanly_Create(CFAllocatorRef allocator, CFUUIDRef requestedType) {
+extern "C" void *Spanly_Create(CFAllocatorRef allocator, CFUUIDRef requestedType) {
     if (!CFEqual(requestedType, kAudioServerPlugInTypeUUID)) return NULL;
     return gDriverRef;
 }

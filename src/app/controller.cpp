@@ -57,7 +57,7 @@ void Controller::start() {
                         s->scheduleRestart();
                 }
             },
-        .willQuit = [this] { updateSpeakers(); },
+        .willQuit = [] { platform::restoreSpeakers(); },
     });
     onBattery_ = platform::onBattery();
     every(5, [this] { checkPower(); });
@@ -168,6 +168,12 @@ void Controller::wire(const std::shared_ptr<Link>& l) {
         input([=](platform::Pointer& p) { p.pen(a, b, x, y, pressure); });
     };
     l->onZoom = [input](int8_t dir, float x, float y) { input([=](platform::Pointer& p) { p.zoom(dir, x, y); }); };
+    l->onMicAudio = [this, weak](const Bytes& pcm) {
+        auto l = weak.lock();
+        auto s = l ? l->session() : nullptr;
+        std::scoped_lock lock(micLock_);
+        if (s && s == micSession_.lock() && micPlayer_) micPlayer_->play(pcm);
+    };
     l->onViewing = [weak](bool viewing) {
         platform::runOnMain([weak, viewing] {
             auto l = weak.lock();
@@ -267,7 +273,37 @@ void Controller::setDisplayAwake(bool on) {
     if (adbTool_) on ? adbTool_->wakeTablet() : adbTool_->sleepTablet();
 }
 
-void Controller::updateSpeakers() {}   // Tablet Only sound: milestone 3
-void Controller::updateMicrophone() {} // the tablet's microphone: milestone 3
+/// "Tablet Only" sound mutes the computer while it streams to a tablet.
+void Controller::updateSpeakers() {
+    bool streaming = std::ranges::any_of(sessions_, [](auto& s) { return s->streaming(); });
+    if (settings_.sound() == Sound::Tablet && streaming) {
+        platform::muteSpeakers();
+    } else {
+        platform::restoreSpeakers();
+    }
+}
+
+/// The first tablet's microphone as "Spanly Microphone", to match the setting and the connections.
+void Controller::updateMicrophone() {
+    std::shared_ptr<TabletSession> target;
+    if (settings_.tabletMicrophone() && platform::microphoneInstalled()) {
+        if (auto p = primary(); p && p->link()->connected()) target = p;
+    }
+    std::scoped_lock l(micLock_);
+    auto current = micSession_.lock();
+    if (target == current && (target != nullptr) == (micPlayer_ != nullptr)) return;
+    if (current) current->link()->send(Msg::MicStop);
+    micSession_.reset();
+    micPlayer_.reset();
+    if (!target) return;
+    micPlayer_ = platform::PcmPlayer::create(1, platform::kMicrophoneUid);
+    if (!micPlayer_) {
+        log("could not open Spanly Microphone");
+        return;
+    }
+    micSession_ = target;
+    target->link()->send(Msg::MicStart);
+    log("using {}'s microphone as Spanly Microphone", target->name());
+}
 
 } // namespace spanly

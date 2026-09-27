@@ -74,6 +74,9 @@ private:
     std::unique_ptr<TcpListener> wifi_;
     std::unique_ptr<Beacon> beacon_;
     std::unique_ptr<Adb> adbTool_;
+    std::shared_ptr<platform::PcmPlayer> micPlayer_; // read on link threads
+    std::weak_ptr<TabletSession> micSession_;
+    std::mutex micLock_;
     std::vector<std::shared_ptr<TabletSession>> sessions_;
     bool onBattery_ = false;
     bool displayOn_ = true;

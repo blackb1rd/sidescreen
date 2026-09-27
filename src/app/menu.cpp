@@ -142,6 +142,17 @@ std::vector<MenuItem> Menu::build() {
                 c_.updateSpeakers();
                 if (capture) c_.restartCapture();
             })));
+    if (platform::microphoneInstalled()) {
+        m.push_back(MenuItem::item(
+            "Use Tablet as Microphone",
+            [this] {
+                c_.settings().setTabletMicrophone(!c_.settings().tabletMicrophone());
+                c_.updateMicrophone();
+            },
+            s.tabletMicrophone()));
+    } else {
+        m.push_back(MenuItem::item("Install Spanly Microphone…", [] { platform::installMicrophone(); }));
+    }
     m.push_back(MenuItem::item(
         "Return Pointer After Touch",
         [this] {

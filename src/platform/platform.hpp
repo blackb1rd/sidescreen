@@ -128,6 +128,28 @@ public:
     virtual bool touchActive() const = 0;
 };
 
+// MARK: Sound
+
+/// "Tablet Only" sound: mute the computer's own output (the captured sound still reaches the
+/// tablet), remembering that we did; restore undoes it (also after a crash, on next launch).
+void muteSpeakers();
+void restoreSpeakers();
+
+/// Plays 48 kHz 16-bit PCM from the tablet (its own sound, or its microphone into the virtual
+/// microphone device). Keeps at most ~150 ms queued so it never drifts behind.
+class PcmPlayer {
+public:
+    /// `deviceUid`: play into that device instead of the default output. Null if unavailable.
+    static std::unique_ptr<PcmPlayer> create(int channels, const std::string& deviceUid = {});
+    virtual ~PcmPlayer() = default;
+    virtual void play(const Bytes& pcm) = 0;
+};
+
+/// The "Spanly Microphone" virtual device (an audio driver installed once, with admin rights).
+constexpr const char* kMicrophoneUid = "com.caigenix.spanly.microphone";
+bool microphoneInstalled();
+void installMicrophone(); // asks for the administrator password
+
 // MARK: Menu bar / tray
 
 /// One entry in the menu, rebuilt each time it opens (the platform draws it).

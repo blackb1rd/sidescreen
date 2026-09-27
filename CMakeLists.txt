@@ -53,6 +53,7 @@ endif()
 # The app: the shared session logic (src/app) on top of a platform backend.
 if(APPLE)
   add_library(spanly_platform STATIC
+    src/platform/mac/audio.cpp
     src/platform/mac/capture.cpp
     src/platform/mac/display.cpp
     src/platform/mac/encoder.cpp
@@ -63,7 +64,7 @@ if(APPLE)
     src/platform/posix/process.cpp
   )
   target_link_libraries(spanly_platform PUBLIC spanly_core objc
-    "-framework AppKit" "-framework ApplicationServices" "-framework CoreFoundation" "-framework CoreGraphics"
+    "-framework AppKit" "-framework ApplicationServices" "-framework AudioToolbox" "-framework CoreAudio" "-framework CoreFoundation" "-framework CoreGraphics"
     "-framework CoreMedia" "-framework CoreVideo" "-framework Foundation" "-framework IOKit" "-framework ScreenCaptureKit" "-framework ServiceManagement"
     "-framework SystemConfiguration" "-framework VideoToolbox")
   target_compile_options(spanly_platform PRIVATE -fblocks)
