@@ -7,3 +7,4 @@ mac/dist/
 /host/target
 /build
 /build-*
+/target
