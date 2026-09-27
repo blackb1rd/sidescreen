@@ -28,6 +28,8 @@ pub mod msg {
     pub const SHARE_FRAME: u8 = 18;
     pub const VIEWING: u8 = 19;
     pub const SHARE_STATUS: u8 = 23;
+    /// Tablet ID: an idle Wi-Fi connection the tablet keeps ready while it is on USB.
+    pub const STANDBY: u8 = 28;
 }
 
 pub fn encode(kind: u8, payload: &[u8]) -> Vec<u8> {
@@ -53,6 +55,7 @@ pub fn plausible(kind: u8, len: usize) -> bool {
         msg::SHARE_CONFIG => (1..=4096).contains(&len),
         msg::SHARE_FRAME => (2..=16 << 20).contains(&len),
         msg::SHARE_STATUS => len == 2,
+        msg::STANDBY => len == 16,
         _ => false,
     }
 }

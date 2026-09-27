@@ -6,6 +6,7 @@ use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LinkKind {
@@ -37,7 +38,9 @@ pub struct Session {
 }
 
 impl Session {
-    /// `write` gets each encoded message (a TCP stream, or an encrypting wrapper).
+    /// `write` gets each encoded message (a TCP stream, or an encrypting wrapper). With nothing
+    /// to send for 0.5 s it gets a NOP: an idle screen sends no frames, and the tablet treats 4 s
+    /// of silence as a dead link.
     pub fn start(
         kind: LinkKind,
         mut write: impl FnMut(&[u8]) -> std::io::Result<()> + Send + 'static,
@@ -46,8 +49,17 @@ impl Session {
         let open = Arc::new(AtomicBool::new(true));
         let o = open.clone();
         std::thread::spawn(move || {
-            for m in rx {
-                if o.load(Ordering::Relaxed) && write(&m).is_err() {
+            let heartbeat = protocol::encode(protocol::msg::NOP, &[]);
+            loop {
+                let m = match rx.recv_timeout(Duration::from_millis(500)) {
+                    Ok(m) => m,
+                    Err(crossbeam_channel::RecvTimeoutError::Timeout) => heartbeat.clone(),
+                    Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
+                };
+                if !o.load(Ordering::Relaxed) {
+                    break;
+                }
+                if write(&m).is_err() {
                     o.store(false, Ordering::Relaxed);
                 }
             }
