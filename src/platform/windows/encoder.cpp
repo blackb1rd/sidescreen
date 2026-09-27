@@ -6,6 +6,8 @@
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 
+#include <strmif.h> // ICodecAPI
+
 #include <codecapi.h>
 #include <mfapi.h>
 #include <mferror.h>

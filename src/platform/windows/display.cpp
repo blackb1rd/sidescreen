@@ -103,7 +103,8 @@ public:
                                              : POINT{taken.right, 0};
         DEVMODEW mode{};
         mode.dmSize = sizeof mode;
-        mode.dmPosition = origin;
+        mode.dmPosition.x = origin.x;
+        mode.dmPosition.y = origin.y;
         mode.dmFields = DM_POSITION;
         ChangeDisplaySettingsExW(m_.device.c_str(), &mode, nullptr, CDS_UPDATEREGISTRY | CDS_NORESET, nullptr);
         ChangeDisplaySettingsExW(nullptr, nullptr, nullptr, 0, nullptr);

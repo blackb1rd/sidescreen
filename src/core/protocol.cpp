@@ -101,15 +101,16 @@ Hello Hello::parse(ByteView p) {
 
 SplitAccessUnit splitParameterSets(ByteView annexB) {
     SplitAccessUnit out;
+    Bytes config;
     static constexpr uint8_t kStart[] = {0, 0, 0, 1};
     for (ByteView nal : nalUnits(annexB)) {
         uint8_t type = nal.empty() ? 0 : uint8_t(nal[0] & 0x1FU);
         if (type == 9) continue; // access unit delimiter
-        if ((type == 7 || type == 8) && !out.config) out.config.emplace();
-        Bytes& to = type == 7 || type == 8 ? *out.config : out.picture;
+        Bytes& to = type == 7 || type == 8 ? config : out.picture;
         to.insert(to.end(), std::begin(kStart), std::end(kStart));
         to.insert(to.end(), nal.begin(), nal.end());
     }
+    if (!config.empty()) out.config = std::move(config);
     return out;
 }
 
