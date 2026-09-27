@@ -29,5 +29,6 @@ do {
 }
 controller.start()
 let menuBar = MenuBar(controller: controller)
+let urlHandler = URLHandler(controller: controller)
 menuBar.onboardIfNeeded()
 app.run()

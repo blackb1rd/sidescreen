@@ -12,6 +12,13 @@ This repository is the Mac app. The tablet needs the **SideScreen** Android app.
   at 2304×1440 on a Redmi Pad 2.
 - **Touch like a tablet**: swipe to scroll (with momentum), tap to click, hold-and-move to drag,
   hold or two-finger tap to right-click, pinch to zoom.
+- **Extend or mirror**: a separate second screen, or the same picture as the Mac. Turn the tablet
+  and the display turns with it (portrait or landscape), keeping its windows.
+- **Pen and sound**: stylus hover and pressure, and the Mac's sound on the tablet's speakers.
+- **Wi-Fi too**: plug in once to pair, then connect wirelessly. The connection is encrypted and
+  the bitrate adapts to the network.
+- **The other way round**: show the tablet's own screen in a window on the Mac, and control it
+  with the Mac's mouse and keyboard.
 - **Follows the Mac**: starts when you plug the tablet in, sleeps and wakes with the Mac's display.
 
 ## Requirements
@@ -42,9 +49,13 @@ whether to open SideScreen for the USB accessory; tick **Always**.
 
 | Menu | |
 |---|---|
+| Show Tablet Screen on Mac | the tablet's own screen in a window, controlled with mouse and keyboard (Esc = Back) |
 | Tablet | which connected Android device to use (only that device is ever touched) |
+| Mode | Extend (separate second screen) or Mirror (same as the Mac) |
 | Resolution | Automatic, Retina (sharpest) or Standard (lightest) |
 | Position | where the display sits next to the main screen, or leave it where you arrange it |
+| Allow Wi-Fi Connection | let tablets that were plugged in once connect wirelessly; *Forget Paired Tablets* revokes them |
+| Play Mac Sound on Tablet | send the Mac's sound to the tablet's speakers |
 | Return Pointer to Mac After Touch | put the pointer back on the Mac screen after each touch |
 | Open at Login, Show Log, Quit | |
 
@@ -53,8 +64,12 @@ The log is at `~/Library/Logs/SideScreen.log`.
 Tip: in System Settings → Desktop & Dock, set *Click wallpaper to reveal desktop* to *Only in
 Stage Manager*, or a tap on an empty part of the tablet hides all your windows.
 
-Command-line options (run `SideScreen.app/Contents/MacOS/sidescreen --help`) override the menu
-settings for one run, for example `--stats` to log frame rate and latency.
+Controlling the tablet from the Mac needs **SideScreen: control from Mac** turned on once in the
+tablet's Settings › Accessibility.
+
+Automation: `open sidescreen://show-tablet` and `open sidescreen://hide-tablet` (for example
+from Shortcuts). Command-line options (`SideScreen.app/Contents/MacOS/sidescreen --help`)
+override the menu settings for one run, for example `--stats` to log frame rate and latency.
 
 ## How it works
 
@@ -66,11 +81,14 @@ Pointer (CGEvent) ◀──── touch / scroll / zoom ──────┘   
 
 | File | |
 |---|---|
-| `Controller.swift` | ties it together: tablet sessions, flow control, settings |
-| `VirtualScreen.swift` | the virtual display (private `CGVirtualDisplay` API) |
-| `Capture.swift`, `Encoder.swift` | ScreenCaptureKit capture, VideoToolbox low-latency encoding |
+| `Controller.swift` (+ `+Menu`, `+Share`) | ties it together: tablet sessions, settings, adaptive bitrate |
+| `FlowControl.swift` | frames in flight, ACKs, latency |
+| `VirtualScreen.swift` | the virtual display (private `CGVirtualDisplay` API), rotation |
+| `Capture.swift`, `Encoder.swift`, `AudioPCM.swift` | ScreenCaptureKit video and sound, VideoToolbox encoding |
 | `Usb.swift` | Android Open Accessory link over libusb |
+| `WifiLink.swift`, `WifiCrypto.swift` | Bonjour + encrypted Wi-Fi link |
 | `Server.swift`, `Adb.swift` | TCP fallback through `adb reverse` |
+| `TabletWindow.swift` | the tablet's own screen in a Mac window, and input back to it |
 | `Protocol.swift` | message framing ([PROTOCOL.md](PROTOCOL.md)) |
 | `Pointer.swift` | gestures to mouse, scroll and keyboard events |
 | `MenuBar.swift`, `Settings.swift`, `Permissions.swift` | the UI |

@@ -6,7 +6,14 @@ enum Msg: UInt8 {
     case nop = 0 // padding / heartbeat, ignored by the receiver
     case size = 1, config = 2, frame = 3, display = 4
     case helloRequest = 5 // "please (re)send HELLO" — lets a link recover a session the tablet still holds
-    case touch = 10, hello = 11, ack = 12, scroll = 13, zoom = 14
+    case audio = 6 // 48 kHz 16-bit interleaved stereo PCM
+    case pair = 7 // Wi-Fi pairing secret (32 bytes) + this Mac's name, sent only over USB
+    case shareStart = 8, shareStop = 9 // show / stop showing the tablet's screen on the Mac
+    case remotePointer = 20, remoteScroll = 21, remoteKey = 22 // Mac input on the tablet's screen
+    case touch = 10, hello = 11, ack = 12, scroll = 13, zoom = 14, pen = 15
+    case shareSize = 16, shareConfig = 17, shareFrame = 18 // the tablet's screen, H.264
+    case viewing = 19 // the tablet's app shows the Mac's screen (1) or is in the background (0)
+    case shareStatus = 23 // state (0 stopped, 1 sharing, 2 declined), control available
 }
 
 extension Data {
@@ -35,6 +42,14 @@ class Link {
     /// (kind, phase, last, x, y, dx, dy) — see Pointer.scroll
     var onScroll: ((UInt8, UInt8, Bool, Float, Float, Float, Float) -> Void)?
     var onZoom: ((Int8, Float, Float) -> Void)?
+    /// (action, buttons, x, y, pressure) — see Pointer.pen
+    var onPen: ((UInt8, UInt8, Float, Float, Float) -> Void)?
+    var onViewing: ((Bool) -> Void)?
+    /// The tablet's own screen: (width, height), parameter sets, frames, and (state, control).
+    var onShareSize: ((Int, Int) -> Void)?
+    var onShareConfig: ((Data) -> Void)?
+    var onShareFrame: ((Data) -> Void)?
+    var onShareStatus: ((UInt8, Bool) -> Void)?
 
     var isConnected: Bool { false }
 
@@ -44,6 +59,7 @@ class Link {
     func send(_ type: Msg, _ payload: Data) {}
 
     static let marker: UInt8 = 0x5A
+    static let maxRecord = 20 << 20 // largest encrypted Wi-Fi record
     static let headerSize = 6
 
     /// Header sanity per message type (tablet -> Mac), so stale bytes rarely pass for a message.
@@ -54,6 +70,12 @@ class Link {
         case .hello: return (12...64).contains(len)
         case .ack: return len == 4
         case .scroll: return len == 19
+        case .pen: return len == 14
+        case .viewing: return len == 1
+        case .shareSize: return len == 12
+        case .shareConfig: return (1...4096).contains(len)
+        case .shareFrame: return (2...(16 << 20)).contains(len)
+        case .shareStatus: return len == 2
         default: return false
         }
     }
@@ -98,6 +120,20 @@ class Link {
                       Float(bitPattern: p.u32(at: 11)), Float(bitPattern: p.u32(at: 15)))
         } else if type == Msg.zoom.rawValue, p.count >= 9 {
             onZoom?(Int8(bitPattern: p[p.startIndex]), Float(bitPattern: p.u32(at: 1)), Float(bitPattern: p.u32(at: 5)))
+        } else if type == Msg.pen.rawValue, p.count >= 14 {
+            let b = p.startIndex
+            onPen?(p[b], p[b + 1], Float(bitPattern: p.u32(at: 2)), Float(bitPattern: p.u32(at: 6)),
+                   Float(bitPattern: p.u32(at: 10)))
+        } else if type == Msg.viewing.rawValue, p.count >= 1 {
+            onViewing?(p[p.startIndex] != 0)
+        } else if type == Msg.shareSize.rawValue, p.count >= 8 {
+            onShareSize?(Int(p.u32(at: 0)), Int(p.u32(at: 4)))
+        } else if type == Msg.shareConfig.rawValue {
+            onShareConfig?(p)
+        } else if type == Msg.shareFrame.rawValue, p.count >= 2 {
+            onShareFrame?(Data(p.dropFirst())) // flags byte, then the access unit
+        } else if type == Msg.shareStatus.rawValue, p.count >= 2 {
+            onShareStatus?(p[p.startIndex], p[p.startIndex + 1] != 0)
         } else if type == Msg.ack.rawValue, p.count >= 4 {
             onAck?(p.u32(at: 0))
         } else if type == Msg.hello.rawValue, p.count >= 12 {

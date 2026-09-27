@@ -70,6 +70,15 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>$MIN_MACOS</string>
     <key>NSHumanReadableCopyright</key><string>SideScreen</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>SideScreen lets your paired tablet connect over Wi-Fi when "Allow Wi-Fi Connection" is on.</string>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>dev.blackb1rd.sidescreen</string>
+        <key>CFBundleURLSchemes</key><array><string>sidescreen</string></array>
+    </dict></array>
+    <key>NSBonjourServices</key>
+    <array><string>_sidescreen._tcp</string></array>
 </dict>
 </plist>
 EOF

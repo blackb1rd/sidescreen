@@ -6,24 +6,22 @@ import QuartzCore
 // MARK: - Controller
 
 final class Controller {
-    private let opts: Options
+    let opts: Options
     let settings = Settings()
     private let server: Server
-    private var usb: UsbLink?
-    private let adb: Adb?
-    private let capture = Capture()
-    private let pointer = Pointer()
-    private var encoder: Encoder?
+    var usb: UsbLink?
+    var wifi: WifiLink!
+    var tabletWindow: TabletWindow?
+    var tabletViewing = true // read on the capture queue; a stale read just encodes one extra frame
+    private var currentBitrate = 0.0 // adaptive: starts at bitrateMbps, lowered when the link struggles
+    let adb: Adb?
+    let capture = Capture()
+    let pointer = Pointer()
+    var encoder: Encoder?
     private var displayID: CGDirectDisplayID = 0
-    private var size = (w: 0, h: 0)
+    var size = (w: 0, h: 0)
     private var tabletHEVC = false
-    // Flow control: frames sent but not yet decoded on the tablet (the tablet ACKs each one).
-    private let flowLock = NSLock()
-    private var nextFrameId: UInt32 = 1
-    private var lastAcked: UInt32 = 0
-    private var lastAckTime = CACurrentMediaTime()
-    private var sentAt: [UInt32: CFTimeInterval] = [:]
-    private let maxInFlight: UInt32 = 3
+    private let flow = FlowControl()
     private var activeBitrate = 0.0
     private var decodeMax = (0, 0) // largest size the tablet can decode at 60 fps (0 = unknown)
     private var onBattery = false
@@ -31,16 +29,18 @@ final class Controller {
     private var timers: [DispatchSourceTimer] = []
     private var waitingForKey = false
     private var displayOn = true
-    private var restartWork: DispatchWorkItem?
-    private var virtual: VirtualScreen?
+    var restartWork: DispatchWorkItem?
+    var virtual: VirtualScreen?
     private var teardownWork: DispatchWorkItem?
-    private var lastHello: (w: Int, h: Int, dpi: Int, caps: UInt32)?
+    var lastHello: (w: Int, h: Int, dpi: Int, caps: UInt32)?
 
     init(_ opts: Options) throws {
         self.opts = opts
         server = try Server(port: opts.port)
         adb = opts.manageAdb ? Adb(port: opts.port) : nil
         if opts.manageAdb && adb == nil { log("adb not found; set ADB=/path/to/adb or run adb reverse yourself") }
+        let settings = self.settings
+        wifi = WifiLink(secret: { settings.wifiSecret })
         if opts.usb {
             // The tablet chosen in the menu; with nothing chosen yet, the one adb sees (if any).
             usb = UsbLink(serial: { [weak self] in self?.settings.deviceSerial ?? self?.adb?.serial })
@@ -55,7 +55,7 @@ final class Controller {
         }
 
         pointer.restoreCursor = opts.restoreCursor ?? settings.restoreCursor
-        for l in [server, usb].compactMap({ $0 }) as [Link] {
+        for l in [server, usb, wifi].compactMap({ $0 }) as [Link] {
             l.onClient = { [weak self] in self?.clientConnected() }
             l.onHello = { [weak self] w, h, dpi, caps, maxW, maxH in
                 DispatchQueue.main.async {
@@ -65,8 +65,16 @@ final class Controller {
                     self.hello(w, h, dpi, caps)
                 }
             }
-            l.onDisconnect = { [weak self] in DispatchQueue.main.async { self?.scheduleTeardown() } }
-            l.onAck = { [weak self] id in self?.acked(id) }
+            l.onDisconnect = { [weak self] in
+                DispatchQueue.main.async {
+                    self?.hideTabletScreen()
+                    self?.tabletViewing = true
+                    self?.scheduleTeardown()
+                }
+            }
+            l.onAck = { [weak self] id in
+                if let ms = self?.flow.acked(id) { self?.stats.latency(ms) }
+            }
             l.onTouch = { [weak self] a, x, y in
                 guard let self, trusted || AXIsProcessTrusted() else { return }
                 DispatchQueue.main.async { self.pointer.touch(action: a, x: x, y: y) }
@@ -75,22 +83,33 @@ final class Controller {
                 guard let self, trusted || AXIsProcessTrusted() else { return }
                 DispatchQueue.main.async { self.pointer.scroll(kind: kind, phase: phase, last: last, x: x, y: y, dx: dx, dy: dy) }
             }
+            l.onPen = { [weak self] action, buttons, x, y, pressure in
+                guard let self, trusted || AXIsProcessTrusted() else { return }
+                DispatchQueue.main.async { self.pointer.pen(action: action, buttons: buttons, x: x, y: y, pressure: pressure) }
+            }
             l.onZoom = { [weak self] dir, x, y in
                 guard let self, trusted || AXIsProcessTrusted() else { return }
                 DispatchQueue.main.async { self.pointer.zoom(direction: dir, x: x, y: y) }
             }
+            wireTabletShare(l)
         }
         capture.onFrame = { [weak self] pb, pts in
-            guard let self, self.link.isConnected else { return }
+            // Nothing to encode while the tablet's app is in the background (e.g. its own
+            // screen is being shown on the Mac).
+            guard let self, self.link.isConnected, self.tabletViewing else { return }
             // USB link backed up: skip this capture rather than encode it. Skipping before the
             // encoder keeps the reference chain intact, so no keyframe is needed to recover.
-            if self.tooManyInFlight() {
+            if self.flow.tooManyInFlight() {
                 self.stats.drop()
                 return
             }
             self.encoder?.encode(pb, pts: pts)
         }
         capture.onStop = { [weak self] in self?.scheduleRestart() }
+        capture.onAudio = { [weak self] pcm in
+            guard let self, self.link.isConnected else { return }
+            self.link.send(.audio, pcm)
+        }
 
         let ws = NSWorkspace.shared.notificationCenter
         for n in [NSWorkspace.screensDidSleepNotification, NSWorkspace.willSleepNotification] {
@@ -102,7 +121,7 @@ final class Controller {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            guard let self, self.opts.displayName != nil || self.virtual != nil else { return }
+            guard let self, self.opts.displayName != nil || self.virtual != nil || (self.mirroring && self.encoder != nil) else { return }
             self.scheduleRestart()
         }
 
@@ -110,6 +129,8 @@ final class Controller {
         onBattery = Controller.isOnBattery()
         every(5) { [weak self] in self?.checkPower() }
         every(0.1) { [weak self] in self?.updateCursorVisibility() }
+        every(1) { [weak self] in self?.adaptBitrate() }
+        wifi.setEnabled(settings.wifi)
         if opts.stats {
             every(5) { [weak self] in
                 if let line = self?.stats.report(seconds: 5) { log(line) }
@@ -124,6 +145,11 @@ final class Controller {
     }
 
     private func findDisplay() -> (CGDirectDisplayID, Int, Int)? {
+        if mirroring {
+            let id = CGMainDisplayID()
+            guard let mode = CGDisplayCopyDisplayMode(id) else { return nil }
+            return (id, mode.pixelWidth, mode.pixelHeight)
+        }
         guard let name = opts.displayName else {
             guard let v = virtual, let mode = CGDisplayCopyDisplayMode(v.displayID) else { return nil }
             return (v.displayID, mode.pixelWidth, mode.pixelHeight)
@@ -165,6 +191,7 @@ final class Controller {
         else { return }
         if opts.stats { enc.stats = stats }
         activeBitrate = bitrateMbps
+        currentBitrate = bitrateMbps
         enc.onFrame = { [weak self] data, isKey, config, started in self?.send(data, isKey: isKey, config: config, started: started) }
         let sizeChanged = size != (w, h)
         encoder = enc
@@ -174,7 +201,7 @@ final class Controller {
 
         Task {
             do {
-                try await capture.start(displayID: id, width: w, height: h, fps: fps)
+                try await capture.start(displayID: id, width: w, height: h, fps: fps, audio: settings.audio)
                 log("capturing display \(id) at \(w)x\(h) @ \(fps) fps\(onBattery ? " (on battery)" : ""), \(enc.codec), \(bitrateMbps) Mbit/s")
                 if link.isConnected {
                     if sizeChanged { sendSize() }
@@ -188,7 +215,7 @@ final class Controller {
         }
     }
 
-    private func scheduleRestart(after delay: Double = 1) {
+    func scheduleRestart(after delay: Double = 1) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.restartWork?.cancel()
@@ -205,10 +232,14 @@ final class Controller {
     }
 
     /// The raw USB link when the tablet is on it, otherwise TCP over adb.
-    private var link: Link {
+    /// Where the tablet is: raw USB is best, then Wi-Fi, then TCP through adb.
+    var link: Link {
         if let usb, usb.isConnected { return usb }
+        if wifi.isConnected { return wifi }
         return server
     }
+
+    var onWifi: Bool { link === wifi }
 
     /// Show the cursor on the tablet only when the Mac's own mouse/trackpad has put it there,
     /// never because a touch borrowed it (that would leave a stray pointer in the picture).
@@ -217,7 +248,7 @@ final class Controller {
         capture.setShowsCursor(CGDisplayBounds(displayID).contains(here) && !pointer.touchActive)
     }
 
-    private var onUsb: Bool { link is UsbLink }
+    var onUsb: Bool { link is UsbLink }
 
     private var wantHiDPI: Bool {
         if let forced = opts.hiDPI { return forced }
@@ -228,9 +259,31 @@ final class Controller {
         }
     }
 
-    private var position: String { opts.position ?? settings.position.rawValue }
+    var position: String { opts.position ?? settings.position.rawValue }
 
-    private var bitrateMbps: Double { opts.bitrateMbps ?? (onUsb ? 20 : 6) }
+    /// Mirror mode shows the Mac's main screen instead of a separate virtual display.
+    private var mirroring: Bool { opts.displayName == nil && settings.mode == .mirror }
+
+    /// Starting (and highest) bitrate for the current link; adaptive bitrate may go lower.
+    private var bitrateMbps: Double { opts.bitrateMbps ?? (onUsb ? 20 : onWifi ? 12 : 6) }
+
+    /// Every second: lower the bitrate when frames queue up or latency climbs, and creep back
+    /// up when the link has headroom. Matters most on Wi-Fi.
+    private func adaptBitrate() {
+        guard let enc = encoder, link.isConnected else { return }
+        let w = flow.takeWindow()
+        guard w.acks + w.skipped >= 10 else { return } // screen idle: nothing to learn
+        var target = currentBitrate
+        if w.skipped > (w.acks + w.skipped) / 5 || w.avgLatencyMs > 90 {
+            target = max(3, currentBitrate * 0.75)
+        } else if w.skipped == 0 && w.avgLatencyMs < 60 {
+            target = min(bitrateMbps, currentBitrate * 1.1)
+        }
+        guard abs(target - currentBitrate) >= 0.5 else { return }
+        currentBitrate = target
+        enc.setBitrate(Int(target * 1_000_000))
+        if opts.stats { log(String(format: "bitrate -> %.1f Mbit/s (latency %.0f ms, %d skipped)", target, w.avgLatencyMs, w.skipped)) }
+    }
 
     private var currentFps: Int { onBattery && opts.batteryFps > 0 ? min(opts.batteryFps, opts.fps) : opts.fps }
 
@@ -271,7 +324,7 @@ final class Controller {
         if opts.displayName != nil { startStream() }
     }
 
-    private func hello(_ w: Int, _ h: Int, _ dpi: Int, _ caps: UInt32) {
+    func hello(_ w: Int, _ h: Int, _ dpi: Int, _ caps: UInt32) {
         lastHello = (w, h, dpi, caps)
         teardownWork?.cancel()
         teardownWork = nil
@@ -285,7 +338,30 @@ final class Controller {
             }
         }
         guard opts.displayName == nil else { return }
-        let (tw, th) = (max(w, h), min(w, h)) // landscape
+        if mirroring {
+            virtual = nil
+            if size.w > 0 && activeBitrate == bitrateMbps {
+                startStream()
+            } else {
+                size = (0, 0)
+                scheduleRestart(after: 0.1)
+            }
+            return
+        }
+        let (tw, th) = (w, h) // as the tablet is held: landscape or portrait
+        if let v = virtual, v.hiDPI == wantHiDPI, (v.tabletW, v.tabletH) == (th, tw) {
+            // The tablet turned: reshape the same display so its windows stay on it.
+            if v.resize(tabletW: tw, tabletH: th) {
+                log("tablet rotated: display is now \(tw)x\(th)")
+                size = (0, 0)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    guard let self, self.virtual === v else { return }
+                    v.selectMode()
+                    self.scheduleRestart(after: 0.3)
+                }
+                return
+            }
+        }
         if let v = virtual, v.tabletW == tw, v.tabletH == th, v.hiDPI == wantHiDPI {
             // A repeated HELLO while the display is still being set up: the pipeline
             // start will send SIZE and a keyframe when it's ready.
@@ -310,11 +386,11 @@ final class Controller {
             return
         }
         virtual = v
-        log("created virtual display \(v.displayID) for a \(tw)x\(th) tablet (\(wantHiDPI ? "HiDPI" : "standard"), over \(onUsb ? "USB accessory" : "adb"))")
+        log("created virtual display \(v.displayID) for a \(tw)x\(th) tablet (\(wantHiDPI ? "HiDPI" : "standard"), over \(onUsb ? "USB accessory" : onWifi ? "Wi-Fi" : "adb"))")
         // macOS needs a moment to publish the new display's modes and geometry.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self, self.virtual === v else { return }
-            v.selectHiDPIMode()
+            v.selectMode()
             v.place(self.position)
             self.scheduleRestart(after: 0.5)
         }
@@ -322,7 +398,7 @@ final class Controller {
 
     /// Keep the display briefly across reconnects so windows don't jump around.
     private func scheduleTeardown() {
-        guard opts.displayName == nil, virtual != nil else { return }
+        guard opts.displayName == nil, virtual != nil || encoder != nil else { return }
         teardownWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self, !self.link.isConnected else { return }
@@ -333,7 +409,7 @@ final class Controller {
                     self.encoder = nil
                     self.virtual = nil
                     self.size = (0, 0)
-                    log("tablet gone; removed virtual display")
+                    log("tablet gone; stopped streaming")
                 }
             }
         }
@@ -341,12 +417,16 @@ final class Controller {
         DispatchQueue.main.asyncAfter(deadline: .now() + opts.lingerSeconds, execute: work)
     }
 
+    /// The tablet's app came back to the front (restart with a keyframe) or went away.
+    func setTabletViewing(_ viewing: Bool) {
+        guard viewing != tabletViewing else { return }
+        tabletViewing = viewing
+        if viewing && encoder != nil { startStream() }
+    }
+
     private func startStream() {
-        flowLock.withLock {
-            lastAcked = nextFrameId &- 1
-            lastAckTime = CACurrentMediaTime()
-            sentAt.removeAll()
-        }
+        flow.reset()
+        flow.maxInFlight = onWifi ? 6 : 3
         sendSize()
         link.send(.display, Data([displayOn ? 1 : 0]))
         waitingForKey = true
@@ -360,98 +440,12 @@ final class Controller {
         if !isKey && waitingForKey { return }
         waitingForKey = false
         if let config { link.send(.config, config) }
-        let id = flowLock.withLock { () -> UInt32 in
-            let id = nextFrameId
-            nextFrameId &+= 1
-            sentAt[id] = started
-            return id
-        }
+        let id = flow.register(started: started)
         var p = Data(capacity: data.count + 5)
         p.append(isKey ? 1 : 0)
         p.appendU32(id)
         p.append(data)
         link.send(.frame, p)
-    }
-
-    /// The tablet decoded frame `id` (and therefore everything before it).
-    private func acked(_ id: UInt32) {
-        let started: CFTimeInterval? = flowLock.withLock {
-            guard id > lastAcked else { return nil }
-            lastAcked = id
-            lastAckTime = CACurrentMediaTime()
-            let t = sentAt[id]
-            sentAt = sentAt.filter { $0.key > id }
-            return t
-        }
-        if let started { stats.latency((CACurrentMediaTime() - started) * 1000) }
-    }
-
-    /// Skip capturing when the tablet is behind. If ACKs stop (decoder dropped a frame,
-    /// reconnect), give up waiting after 250 ms so the stream can't stall.
-    private func tooManyInFlight() -> Bool {
-        flowLock.withLock {
-            let inFlight = nextFrameId &- 1 &- lastAcked
-            if inFlight < maxInFlight { return false }
-            if CACurrentMediaTime() - lastAckTime > 0.25 {
-                lastAcked = nextFrameId &- 1
-                lastAckTime = CACurrentMediaTime()
-                sentAt.removeAll()
-                return false
-            }
-            return true
-        }
-    }
-
-    // MARK: Menu bar API (main thread)
-
-    /// The tablet's name and a short description of the stream, or nil when not streaming.
-    var streamStatus: (tablet: String, detail: String)? {
-        guard link.isConnected, encoder != nil, size.w > 0 else { return nil }
-        let name = usb?.connected?.name ?? settings.deviceName ?? "tablet"
-        let codec = encoder?.codec == .hevc ? "HEVC" : "H.264"
-        return (name, "\(size.w)×\(size.h) · \(codec) · \(onUsb ? "USB" : "adb (slower)")")
-    }
-
-    var tablets: [UsbTablet] { usb?.tablets() ?? [] }
-
-    var chosenSerial: String? { settings.deviceSerial ?? adb?.serial }
-
-    func choose(_ t: UsbTablet) {
-        settings.deviceSerial = t.serial
-        settings.deviceName = t.name
-        log("using \(t.name) (\(t.serial)) as the second screen")
-    }
-
-    /// Re-apply menu settings to a running stream.
-    func applySettings(recreateDisplay: Bool) {
-        pointer.restoreCursor = opts.restoreCursor ?? settings.restoreCursor
-        guard let v = virtual else { return }
-        if !recreateDisplay {
-            v.place(position)
-            return
-        }
-        guard let hello = lastHello else { return }
-        restartWork?.cancel()
-        Task {
-            await capture.stop()
-            await MainActor.run {
-                self.encoder = nil
-                self.virtual = nil
-                self.size = (0, 0)
-            }
-            // Give macOS a moment to remove the old display before making the new one.
-            try? await Task.sleep(for: .milliseconds(500))
-            await MainActor.run { self.hello(hello.w, hello.h, hello.dpi, hello.caps) }
-        }
-    }
-
-    /// Remember the tablet we connected to, so it is used again without adb.
-    private func rememberTablet() {
-        guard let c = usb?.connected, !c.serial.isEmpty else { return }
-        if settings.deviceSerial != c.serial || settings.deviceName != c.name {
-            settings.deviceSerial = c.serial
-            settings.deviceName = c.name
-        }
     }
 
     private func setDisplay(on: Bool) {

@@ -75,6 +75,27 @@ private func ack(_ id: UInt32) -> Data {
         #expect(!Link.plausible(0xEE, 0))
     }
 
+    @Test func acceptsTheNewerTabletMessages() {
+        #expect(Link.plausible(Msg.pen.rawValue, 14))
+        #expect(Link.plausible(Msg.viewing.rawValue, 1))
+        #expect(Link.plausible(Msg.shareSize.rawValue, 12))
+        #expect(Link.plausible(Msg.shareFrame.rawValue, 5000))
+        #expect(!Link.plausible(Msg.shareFrame.rawValue, 1))
+        #expect(Link.plausible(Msg.shareStatus.rawValue, 2))
+        #expect(!Link.plausible(Msg.remotePointer.rawValue, 9)) // Mac -> tablet only
+    }
+
+    @Test func parsesPen() {
+        let link = RecordingLink()
+        var pen: (UInt8, UInt8, Float)?
+        link.onPen = { a, b, _, _, pressure in pen = (a, b, pressure) }
+        var p = Data([1, 1])
+        for v: Float in [0.5, 0.5, 0.75] { p.appendU32(v.bitPattern) }
+        var buf = Link.encode(.pen, p)
+        link.consume(&buf)
+        #expect(pen?.0 == 1 && pen?.1 == 1 && pen?.2 == 0.75)
+    }
+
     @Test func parsesHello() {
         let link = RecordingLink()
         var p = Data()

@@ -14,7 +14,10 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
     var onFrame: ((CVPixelBuffer, CMTime) -> Void)?
     var onStop: (() -> Void)?
 
-    func start(displayID: CGDirectDisplayID, width: Int, height: Int, fps: Int) async throws {
+    var onAudio: ((Data) -> Void)?
+    private let audioQueue = DispatchQueue(label: "capture-audio", qos: .userInteractive)
+
+    func start(displayID: CGDirectDisplayID, width: Int, height: Int, fps: Int, audio: Bool) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw NSError(domain: "sidescreen", code: 1, userInfo: [NSLocalizedDescriptionKey: "display not shareable"])
@@ -26,8 +29,15 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
         cfg.pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
         cfg.queueDepth = 5
         cfg.showsCursor = false // turned on by setShowsCursor when the real pointer is on this display
+        if audio {
+            cfg.capturesAudio = true
+            cfg.sampleRate = 48_000
+            cfg.channelCount = 2
+            cfg.excludesCurrentProcessAudio = true
+        }
         let s = SCStream(filter: SCContentFilter(display: display, excludingWindows: []), configuration: cfg, delegate: self)
         try s.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
+        if audio { try s.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioQueue) }
         try await s.startCapture()
         stream = s
         config = cfg
@@ -57,6 +67,10 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sb: CMSampleBuffer, of type: SCStreamOutputType) {
+        if type == .audio {
+            if sb.isValid, let pcm = AudioPCM.interleavedInt16(sb) { onAudio?(pcm) }
+            return
+        }
         guard type == .screen, sb.isValid,
               let atts = CMSampleBufferGetSampleAttachmentsArray(sb, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
               let raw = atts.first?[.status] as? Int, SCFrameStatus(rawValue: raw) == .complete,

@@ -81,6 +81,12 @@ final class Encoder {
 
     func requestKeyframe() { lock.withLock { forceKey = true } }
 
+    /// Change the target bitrate on the fly (adaptive bitrate).
+    func setBitrate(_ bps: Int) {
+        guard let session else { return }
+        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_AverageBitRate, value: NSNumber(value: bps))
+    }
+
     func encode(_ pb: CVPixelBuffer, pts: CMTime) {
         guard let session else { return }
         let key = lock.withLock { () -> Bool in

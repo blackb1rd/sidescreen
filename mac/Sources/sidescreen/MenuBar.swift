@@ -114,8 +114,24 @@ final class MenuBar: NSObject, NSMenuDelegate {
             menu.addItem(ActionItem("⚠︎ Allow Accessibility (for touch)…") { Permissions.requestAccessibility() })
         }
 
+        if controller.link.isConnected {
+            menu.addItem(.separator())
+            if controller.sharingTablet {
+                menu.addItem(ActionItem("Hide Tablet Screen") { [weak self] in self?.controller.hideTabletScreen() })
+            } else {
+                menu.addItem(ActionItem("Show Tablet Screen on Mac…") { [weak self] in self?.controller.showTabletScreen() })
+            }
+        }
+
         menu.addItem(.separator())
         menu.addItem(submenu("Tablet", tabletItems()))
+        menu.addItem(submenu("Mode", Settings.Mode.allCases.map { m in
+            ActionItem(m.title, checked: settings.mode == m) { [weak self] in
+                guard settings.mode != m else { return }
+                settings.mode = m
+                self?.controller.applySettings(recreateDisplay: true)
+            }
+        }))
         menu.addItem(submenu("Resolution", Settings.Quality.allCases.map { q in
             ActionItem(q.title, checked: settings.quality == q) { [weak self] in
                 guard settings.quality != q else { return }
@@ -129,6 +145,17 @@ final class MenuBar: NSObject, NSMenuDelegate {
                 self?.controller.applySettings(recreateDisplay: false)
             }
         }))
+        menu.addItem(ActionItem("Allow Wi-Fi Connection", checked: settings.wifi) { [weak self] in
+            self?.controller.setWifi(!settings.wifi)
+        })
+        if settings.wifi {
+            menu.addItem(label("  Tablets plugged in once can then connect wirelessly"))
+            menu.addItem(ActionItem("  Forget Paired Tablets") { [weak self] in self?.controller.forgetPairedTablets() })
+        }
+        menu.addItem(ActionItem("Play Mac Sound on Tablet", checked: settings.audio) { [weak self] in
+            settings.audio.toggle()
+            self?.controller.restartCapture()
+        })
         menu.addItem(ActionItem("Return Pointer to Mac After Touch", checked: settings.restoreCursor) { [weak self] in
             settings.restoreCursor.toggle()
             self?.controller.applySettings(recreateDisplay: false)

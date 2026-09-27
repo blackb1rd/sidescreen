@@ -96,6 +96,41 @@ final class Pointer {
         e.post(tap: .cghidEventTap)
     }
 
+    // MARK: Pen
+
+    /// A stylus behaves like a precise mouse: hovering moves the pointer (and leaves it on the
+    /// tablet, like a real mouse would), touching presses the button with pressure, and the
+    /// barrel button makes it a right button. action: 0 hover, 1 down, 2 move, 3 up.
+    func pen(action: UInt8, buttons: UInt8, x: Float, y: Float, pressure: Float) {
+        let p = point(x, y)
+        let right = buttons & 1 != 0
+        let button: CGMouseButton = right ? .right : .left
+        let type: CGEventType
+        switch action {
+        case 0: type = .mouseMoved
+        case 1:
+            isDown = true
+            let now = Date()
+            let near = hypot(p.x - lastDownPoint.x, p.y - lastDownPoint.y) < 12
+            clickCount = (now.timeIntervalSince(lastDown) < NSEvent.doubleClickInterval && near) ? clickCount + 1 : 1
+            lastDown = now
+            lastDownPoint = p
+            type = right ? .rightMouseDown : .leftMouseDown
+        case 2: type = isDown ? (right ? .rightMouseDragged : .leftMouseDragged) : .mouseMoved
+        default:
+            guard isDown else { return }
+            isDown = false
+            type = right ? .rightMouseUp : .leftMouseUp
+        }
+        guard let e = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: p, mouseButton: button) else { return }
+        e.setIntegerValueField(.mouseEventClickState, value: Int64(max(clickCount, 1)))
+        // Mark it as a tablet event so drawing apps read the pressure.
+        e.setIntegerValueField(.mouseEventSubtype, value: Int64(CGEventMouseSubtype.tabletPoint.rawValue))
+        e.setDoubleValueField(.mouseEventPressure, value: Double(action == 0 ? 0 : pressure))
+        e.setDoubleValueField(.tabletEventPointPressure, value: Double(action == 0 ? 0 : pressure))
+        e.post(tap: .cghidEventTap)
+    }
+
     // MARK: Scrolling
 
     /// kind 0 = finger scrolling, 1 = momentum after the fingers lift.

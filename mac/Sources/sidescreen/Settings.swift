@@ -16,6 +16,17 @@ final class Settings {
         }
     }
 
+    enum Mode: String, CaseIterable {
+        case extend, mirror
+
+        var title: String {
+            switch self {
+            case .extend: return "Extend (separate second screen)"
+            case .mirror: return "Mirror (same as the Mac's screen)"
+            }
+        }
+    }
+
     enum Position: String, CaseIterable {
         case right, left, above, below, keep
 
@@ -29,6 +40,11 @@ final class Settings {
 
     private let d = UserDefaults.standard
 
+    var mode: Mode {
+        get { Mode(rawValue: d.string(forKey: "mode") ?? "") ?? .extend }
+        set { d.set(newValue.rawValue, forKey: "mode") }
+    }
+
     var quality: Quality {
         get { Quality(rawValue: d.string(forKey: "quality") ?? "") ?? .auto }
         set { d.set(newValue.rawValue, forKey: "quality") }
@@ -37,6 +53,32 @@ final class Settings {
     var position: Position {
         get { Position(rawValue: d.string(forKey: "position") ?? "") ?? .right }
         set { d.set(newValue.rawValue, forKey: "position") }
+    }
+
+    /// Accept paired tablets over Wi-Fi.
+    var wifi: Bool {
+        get { d.bool(forKey: "wifi") }
+        set { d.set(newValue, forKey: "wifi") }
+    }
+
+    /// Secret given to tablets over USB so they can connect over Wi-Fi. Replacing it
+    /// ("Forget Paired Tablets") locks out every tablet until it is plugged in again.
+    var wifiSecret: Data {
+        if let s = d.data(forKey: "wifiSecret"), s.count == 32 { return s }
+        return resetWifiSecret()
+    }
+
+    @discardableResult
+    func resetWifiSecret() -> Data {
+        let s = WifiCrypto.newSecret()
+        d.set(s, forKey: "wifiSecret")
+        return s
+    }
+
+    /// Send the Mac's sound to the tablet's speakers.
+    var audio: Bool {
+        get { d.bool(forKey: "audio") }
+        set { d.set(newValue, forKey: "audio") }
     }
 
     var restoreCursor: Bool {
