@@ -70,6 +70,7 @@ message instead of a zero-length packet.
 | 19 | VIEWING | 1 | 1 = the app shows the Mac's screen, 0 = it's in the background (the Mac stops encoding) |
 | 24 | SHARE_AUDIO | 4–65536 | the tablet's own sound while shared: 48 kHz 16-bit little-endian interleaved stereo PCM |
 | 25 | MIC_AUDIO | 2–65536 | the tablet's microphone: 48 kHz 16-bit little-endian mono PCM |
+| 28 | STANDBY | 16 | tablet ID: this Wi-Fi connection is kept idle while the tablet is on USB (see below) |
 | 23 | SHARE_STATUS | 2 | state u8 (0 stopped, 1 sharing, 2 declined), control u8 (1 = the tablet's control service is on) |
 
 Positions (`x`, `y`) and scroll deltas are fractions of the tablet's video view (0–1). Scroll deltas
@@ -113,6 +114,11 @@ mode, the Mac streams its main display instead of a virtual one.
 4. Everything else is records: length u32 + AES-256-GCM(ciphertext ‖ 16-byte tag). The nonce is
    4 zero bytes followed by a big-endian u64 counter per direction. Inside the records are the
    normal messages above.
+
+While on USB (or adb), the tablet keeps a second connection open over Wi-Fi: it sends
+**STANDBY** instead of HELLO, and after that only answers the Mac's heartbeats (a NOP for each
+NOP). When the cable comes out it sends HELLO on that connection and the stream carries on over
+Wi-Fi straight away. The Mac streams on whichever connection the tablet last sent HELLO on.
 
 A peer without the secret fails its first record and is dropped. The Mac adapts the video bitrate
 to the latency it sees in ACKs, and allows 6 frames in flight on Wi-Fi.

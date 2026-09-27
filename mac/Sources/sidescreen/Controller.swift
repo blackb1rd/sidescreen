@@ -132,20 +132,16 @@ final class Controller {
             sessions.append(s)
             return s
         }()
-        if l.session !== s {
-            l.session?.remove(l)
-            l.session = s
-            s.add(l)
-        }
+        l.session = s
+        s.activate(l)
         if l === usb { rememberTablet() }
         s.hello(h)
     }
 
     private func closed(_ l: Link) {
         guard let s = l.session else { return }
-        s.remove(l) // a reconnect binds again with its HELLO
-        l.session = nil
-        guard !s.link.isConnected else { return } // still there on another link
+        l.session = nil // a reconnect binds again with its HELLO
+        guard !s.link.isConnected else { return } // already moved to another link
         s.viewing = true
         if s === shareSession { hideTabletScreen() }
         updateSpeakers()

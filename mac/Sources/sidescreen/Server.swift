@@ -10,6 +10,7 @@ final class Server: Link {
     private let lock = NSLock()
     private var conn: NWConnection?
     private var pending = 0
+    private lazy var heartbeat = DispatchSource.makeTimerSource(queue: queue)
 
     init(port: UInt16) throws {
         let tcp = NWProtocolTCP.Options()
@@ -27,6 +28,13 @@ final class Server: Link {
             }
         }
         listener.start(queue: queue)
+        // An idle screen sends nothing; the tablet treats 4 s of silence as a dead link.
+        heartbeat.schedule(deadline: .now() + 0.5, repeating: 0.5)
+        heartbeat.setEventHandler { [weak self] in
+            guard let self, self.isConnected else { return }
+            self.send(.nop, Data())
+        }
+        heartbeat.resume()
     }
 
     override var isConnected: Bool { lock.withLock { conn != nil } }

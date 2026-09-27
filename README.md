@@ -57,7 +57,7 @@ whether to open SideScreen for the USB accessory; tick **Always**.
 | Mode | Extend (separate second screen) or Mirror (same as the Mac) |
 | Resolution | Automatic, Retina (sharpest) or Standard (lightest) |
 | Position | where the display sits next to the main screen, or leave it where you arrange it |
-| Allow Wi-Fi Connection | let tablets that were plugged in once connect wirelessly; *Forget Paired Tablets* revokes them |
+| Allow Wi-Fi Connection | (on by default) let tablets that were plugged in once connect wirelessly; *Forget Paired Tablets* revokes them |
 | Sound | Mac Only, Mac and Tablet, or Tablet Only (mutes the Mac's speakers while connected) |
 | Use Tablet as Microphone | the tablet's mic appears on the Mac as **SideScreen Microphone** (the first time, *Install SideScreen Microphone…* adds a small audio driver and asks for your password) |
 | Return Pointer to Mac After Touch | put the pointer back on the Mac screen after each touch |
@@ -68,8 +68,9 @@ The log is at `~/Library/Logs/SideScreen.log`.
 Two tablets at once: plug one in and connect another over Wi-Fi (or both over Wi-Fi). Each gets its
 own display, placed beside the other; the Mac's sound and the microphone use the first one.
 
-With Wi-Fi allowed, unplugging the cable keeps the display: the tablet carries on over Wi-Fi
-within a few seconds, and moves back to USB when you plug in again.
+With Wi-Fi allowed, unplugging the cable keeps the display: while on USB the tablet keeps an idle
+Wi-Fi connection ready, carries on over it as soon as the cable comes out, and moves back to USB
+when you plug in again.
 
 Tip: in System Settings → Desktop & Dock, set *Click wallpaper to reveal desktop* to *Only in
 Stage Manager*, or a tap on an empty part of the tablet hides all your windows.

@@ -17,6 +17,7 @@ enum Msg: UInt8 {
     case shareStatus = 23 // state (0 stopped, 1 sharing, 2 declined), control available
     case shareAudio = 24 // the tablet's own sound while shared: 48 kHz 16-bit stereo PCM
     case micAudio = 25 // the tablet's microphone: 48 kHz 16-bit mono PCM
+    case standby = 28 // tablet ID: an idle Wi-Fi connection kept ready while the tablet is on USB
 }
 
 extension Data {
@@ -113,6 +114,7 @@ class Link {
         case .shareStatus: return len == 2
         case .shareAudio: return (4...65536).contains(len) && len % 4 == 0
         case .micAudio: return (2...65536).contains(len) && len % 2 == 0
+        case .standby: return len == 16
         default: return false
         }
     }

@@ -24,8 +24,8 @@ final class TabletSession {
     let flow = FlowControl()
     let stats = Stats()
     private var waitingForKey = false
-    private let linksLock = NSLock()
-    private var links: [Link] = []
+    private let linkLock = NSLock()
+    private weak var active: Link?
 
     init(id: String, controller: Controller) {
         self.id = id
@@ -52,20 +52,17 @@ final class TabletSession {
         }
     }
 
-    // MARK: Links
+    // MARK: Link
 
-    func add(_ l: Link) {
-        linksLock.withLock { if !links.contains(where: { $0 === l }) { links.append(l) } }
+    /// The tablet said HELLO on `l`: that is where it listens now (it picks the best link:
+    /// raw USB, then adb, then Wi-Fi).
+    func activate(_ l: Link) {
+        linkLock.withLock { active = l }
     }
 
-    func remove(_ l: Link) {
-        linksLock.withLock { links.removeAll { $0 === l } }
-    }
-
-    /// Where the tablet is now: raw USB is best, then Wi-Fi, then TCP through adb.
     var link: Link {
-        let up = linksLock.withLock { links }.filter(\.isConnected)
-        return up.first { $0 is UsbLink } ?? up.first { $0 is WifiConnection } ?? up.first ?? .none
+        guard let l = linkLock.withLock({ active }), l.isConnected else { return .none }
+        return l
     }
 
     var onUsb: Bool { link is UsbLink }
@@ -222,7 +219,8 @@ final class TabletSession {
     }
 
     /// Starting (and highest) bitrate for the current link; adaptive bitrate may go lower.
-    var bitrateMbps: Double { c.opts.bitrateMbps ?? (onUsb ? 20 : onWifi ? 12 : 6) }
+    /// USB carries ~55 Mbit/s before frames back up (measured on a Redmi Pad 2 with full-screen noise).
+    var bitrateMbps: Double { c.opts.bitrateMbps ?? (onUsb ? 40 : onWifi ? 12 : 6) }
 
     /// Every second: lower the bitrate when frames queue up or latency climbs, and creep back
     /// up when the link has headroom. Matters most on Wi-Fi.

@@ -112,6 +112,7 @@ final class WifiConnection: Link {
     private var buffer = Data()
     private var plain = Data()
     private var helloSeen = false
+    private var established = false // HELLO or STANDBY: heartbeats may flow
     private var closed = false
     private var pending = 0
     private var lastReceive = Date()
@@ -189,18 +190,23 @@ final class WifiConnection: Link {
 
     override func handle(_ type: UInt8, _ p: Data) {
         if type == Msg.hello.rawValue, lock.withLock({ () -> Bool in
-            defer { helloSeen = true }
+            defer { helloSeen = true; established = true }
             return !helloSeen
         }) {
             log("tablet connected over Wi-Fi")
             onClient?()
+        } else if type == Msg.standby.rawValue, lock.withLock({ () -> Bool in
+            defer { established = true }
+            return !established
+        }) {
+            log("tablet keeps Wi-Fi ready while on USB")
         }
         super.handle(type, p)
     }
 
     override func send(_ type: Msg, _ payload: Data) {
         guard lock.withLock({ () -> Bool in
-            guard helloSeen, !closed else { return false }
+            guard established, !closed else { return false }
             pending += 1
             return true
         }) else { return }

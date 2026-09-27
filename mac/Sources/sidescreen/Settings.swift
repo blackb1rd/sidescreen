@@ -55,9 +55,10 @@ final class Settings {
         set { d.set(newValue.rawValue, forKey: "position") }
     }
 
-    /// Accept paired tablets over Wi-Fi.
+    /// Accept paired tablets over Wi-Fi (on unless turned off: only tablets plugged in once can
+    /// connect, and it lets a tablet carry on at once when its cable comes out).
     var wifi: Bool {
-        get { d.bool(forKey: "wifi") }
+        get { d.object(forKey: "wifi") as? Bool ?? true }
         set { d.set(newValue, forKey: "wifi") }
     }
 
