@@ -3,6 +3,7 @@
 
 mod adb;
 mod backend;
+mod beacon;
 mod config;
 mod crypto;
 mod flow;

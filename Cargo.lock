@@ -1366,6 +1366,7 @@ dependencies = [
  "gstreamer-app",
  "gstreamer-video",
  "hkdf",
+ "if-addrs",
  "log",
  "mdns-sd",
  "openh264",

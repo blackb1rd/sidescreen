@@ -68,6 +68,8 @@ impl WifiLink {
             });
         }
         log::info!("accepting paired tablets over Wi-Fi on port {PORT} as \"{host_name}\"");
+        // For tablets Bonjour doesn't reach (e.g. this computer is on the tablet's hotspot).
+        crate::beacon::start(host_name, PORT);
         Some(Self {
             session,
             _mdns: mdns,
