@@ -5,3 +5,5 @@ mac/dist/
 *.p12
 *.p8
 /host/target
+/build
+/build-*

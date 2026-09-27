@@ -1,0 +1,7 @@
+# Tests: the registration macros run at start-up and CHECK() expands to negated conditions.
+InheritParentConfig: true
+Checks: >
+  -bugprone-throwing-static-initialization,
+  -bugprone-exception-escape,
+  -readability-simplify-boolean-expr,
+  -cert-err58-cpp

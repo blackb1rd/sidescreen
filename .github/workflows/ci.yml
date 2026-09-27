@@ -6,6 +6,49 @@ on:
   pull_request:
 
 jobs:
+  # The C++ app (Mac, Windows, Linux): build and test on each OS.
+  cpp:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  # clang-format and clang-tidy (pinned versions, so results match on every machine).
+  cpp-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install clang-format and clang-tidy
+        run: pip install clang-format==23.1.1 clang-tidy==22.1.8
+      - name: clang-format
+        run: clang-format --dry-run --Werror $(git ls-files 'src/*.cpp' 'src/*.hpp' 'tests/*.cpp' 'tests/*.hpp')
+      - name: Configure (for compile_commands.json)
+        run: CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Build (generated headers)
+        run: cmake --build build --parallel
+      - name: clang-tidy
+        run: |
+          clang-tidy -p build --quiet $(git ls-files 'src/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
+          ! grep -E "(warning|error):" tidy.log
+
+  # The C++ core under AddressSanitizer and UBSan.
+  cpp-sanitize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DSPANLY_SANITIZE=ON
+      - run: cmake --build build --parallel
+      - run: ctest --test-dir build --output-on-failure
+
   # The Swift Mac app (until the Rust host covers macOS too).
   mac-app:
     runs-on: macos-latest
@@ -81,7 +124,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: No source file over 500 lines
         run: |
-          long=$(find mac/Sources mac/Tests mac/Driver scripts host/src -type f \
-                   \( -name '*.swift' -o -name '*.sh' -o -name '*.py' -o -name '*.c' -o -name '*.h' -o -name '*.m' -o -name '*.rs' \) \
+          long=$(find src tests mac/Sources mac/Tests mac/Driver scripts host/src -type f \
+                   \( -name '*.cpp' -o -name '*.hpp' -o -name '*.swift' -o -name '*.sh' -o -name '*.py' -o -name '*.c' -o -name '*.h' -o -name '*.rs' \) \
                  -exec awk 'END { if (NR > 500) print FILENAME ": " NR " lines" }' {} \;)
           if [ -n "$long" ]; then echo "$long"; exit 1; fi

@@ -1,0 +1,33 @@
+# Static analysis for src/ and tests/ (checked in CI). Every warning is an error.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-implicit-widening-of-multiplication-result,
+  performance-*,
+  -performance-enum-size,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -modernize-avoid-c-arrays,
+  -modernize-use-designated-initializers,
+  -modernize-avoid-c-style-cast,
+  -modernize-use-std-print,
+  misc-*,
+  -misc-const-correctness,
+  -misc-non-private-member-variables-in-classes,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-use-anonymous-namespace,
+  readability-container-size-empty,
+  readability-redundant-*,
+  readability-simplify-boolean-expr,
+  readability-inconsistent-declaration-parameter-name,
+  readability-make-member-function-const,
+  readability-static-accessed-through-instance
+CheckOptions:
+  bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: true
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/src/.*'
+FormatStyle: file
