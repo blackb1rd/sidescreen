@@ -13,6 +13,10 @@ namespace spanly::platform {
 
 using namespace mac;
 
+bool supports(Feature) {
+    return true;
+}
+
 // MARK: Main thread
 
 namespace {

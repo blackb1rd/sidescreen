@@ -25,6 +25,10 @@ struct Rect {
     bool contains(Point p) const { return p.x >= x && p.x < x + w && p.y >= y && p.y < y + h; }
 };
 
+/// What this platform can do beyond streaming (the menu leaves out the rest).
+enum class Feature { Sound, Microphone, TabletWindow, Tray };
+bool supports(Feature f);
+
 // MARK: Main thread
 
 /// Run the event loop; `start` runs on the main thread once it is up. Returns when quit() is called.
@@ -244,6 +248,8 @@ void requestAccessibility();
 /// The computer's name as the user sees it (also the Wi-Fi service name).
 std::string computerName();
 std::string logFilePath();
+/// Where settings live on Windows and Linux (macOS keeps them in the app's preferences).
+std::string configDirectory();
 
 /// Persistent settings (key -> value), shared with earlier versions of the app where possible.
 class Store {

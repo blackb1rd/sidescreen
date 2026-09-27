@@ -94,7 +94,7 @@ std::vector<MenuItem> Menu::build() {
     if (!platform::accessibilityAllowed())
         m.push_back(MenuItem::item("⚠︎ Allow Accessibility (for touch)…", [] { platform::requestAccessibility(); }));
 
-    if (auto p = c_.primary(); p && p->link()->connected()) {
+    if (auto p = c_.primary(); p && p->link()->connected() && platform::supports(platform::Feature::TabletWindow)) {
         m.push_back(MenuItem::separator());
         m.push_back(c_.sharing()
                         ? MenuItem::item("Hide Tablet Screen", [this] { c_.hideTabletScreen(); })
@@ -138,17 +138,21 @@ std::vector<MenuItem> Menu::build() {
         m.push_back(MenuItem::item("  Forget Paired Tablets", [this] { c_.forgetPairedTablets(); }));
     }
     std::string sound = s.sound() == Sound::Tablet ? "tablet" : s.sound() == Sound::Both ? "both" : "mac";
-    m.push_back(MenuItem::submenu(
-        "Sound",
-        choices(
-            {{"mac", "Computer Only"}, {"both", "Computer and Tablet"}, {"tablet", "Tablet Only (mutes the computer)"}},
-            sound, [this, sound](const std::string& v) {
-                bool capture = (sound == "mac") != (v == "mac"); // sound capture on/off
-                c_.settings().setSound(v == "tablet" ? Sound::Tablet : v == "both" ? Sound::Both : Sound::Mac);
-                c_.updateSpeakers();
-                if (capture) c_.restartCapture();
-            })));
-    if (platform::microphoneInstalled()) {
+    if (platform::supports(platform::Feature::Sound))
+        m.push_back(MenuItem::submenu("Sound", choices({{"mac", "Computer Only"},
+                                                        {"both", "Computer and Tablet"},
+                                                        {"tablet", "Tablet Only (mutes the computer)"}},
+                                                       sound, [this, sound](const std::string& v) {
+                                                           bool capture =
+                                                               (sound == "mac") != (v == "mac"); // sound capture on/off
+                                                           c_.settings().setSound(v == "tablet" ? Sound::Tablet
+                                                                                  : v == "both" ? Sound::Both
+                                                                                                : Sound::Mac);
+                                                           c_.updateSpeakers();
+                                                           if (capture) c_.restartCapture();
+                                                       })));
+    if (!platform::supports(platform::Feature::Microphone)) {
+    } else if (platform::microphoneInstalled()) {
         m.push_back(MenuItem::item(
             "Use Tablet as Microphone",
             [this] {

@@ -67,3 +67,12 @@ TEST(splitsAnnexB) {
     CHECK(nals[0].size() == 3 && nals[0][0] == 0x67);
     CHECK(nals[1].size() == 2 && nals[2][2] == 5);
 }
+
+TEST(movesParameterSetsToConfig) {
+    Bytes s{0, 0, 0, 1, 0x09, 0x10, 0, 0, 0, 1, 0x67, 1, 0, 0, 0, 1, 0x68, 2, 0, 0, 0, 1, 0x65, 3};
+    auto split = splitParameterSets(s);
+    CHECK((split.config == Bytes{0, 0, 0, 1, 0x67, 1, 0, 0, 0, 1, 0x68, 2}));
+    CHECK((split.picture == Bytes{0, 0, 0, 1, 0x65, 3}));
+    Bytes p{0, 0, 0, 1, 0x41, 7};
+    CHECK(!splitParameterSets(p).config);
+}

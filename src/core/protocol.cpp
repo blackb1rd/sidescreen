@@ -99,6 +99,20 @@ Hello Hello::parse(ByteView p) {
     return h;
 }
 
+SplitAccessUnit splitParameterSets(ByteView annexB) {
+    SplitAccessUnit out;
+    static constexpr uint8_t kStart[] = {0, 0, 0, 1};
+    for (ByteView nal : nalUnits(annexB)) {
+        uint8_t type = nal.empty() ? 0 : uint8_t(nal[0] & 0x1FU);
+        if (type == 9) continue; // access unit delimiter
+        if ((type == 7 || type == 8) && !out.config) out.config.emplace();
+        Bytes& to = type == 7 || type == 8 ? *out.config : out.picture;
+        to.insert(to.end(), std::begin(kStart), std::end(kStart));
+        to.insert(to.end(), nal.begin(), nal.end());
+    }
+    return out;
+}
+
 std::vector<ByteView> nalUnits(ByteView s) {
     std::vector<std::pair<size_t, size_t>> starts; // (start code offset, payload offset)
     for (size_t i = 0; i + 3 <= s.size();) {

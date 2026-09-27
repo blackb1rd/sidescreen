@@ -71,6 +71,43 @@ if(APPLE)
   target_compile_options(spanly_platform PRIVATE -fblocks)
 endif()
 
+if(WIN32)
+  add_library(spanly_platform STATIC
+    src/platform/common/file_store.cpp
+    src/platform/common/unsupported.cpp
+    src/platform/windows/capture.cpp
+    src/platform/windows/display.cpp
+    src/platform/windows/encoder.cpp
+    src/platform/windows/pointer.cpp
+    src/platform/windows/system.cpp
+    src/platform/windows/tray.cpp
+  )
+  target_link_libraries(spanly_platform PUBLIC spanly_core d3d11 dxgi mfplat mfuuid ole32 oleaut32 shell32 user32 advapi32)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(PkgConfig)
+  if(PKG_CONFIG_FOUND)
+    pkg_check_modules(SPANLY_LINUX IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 gio-2.0 gio-unix-2.0)
+  endif()
+  if(SPANLY_LINUX_FOUND)
+    add_library(spanly_platform STATIC
+      src/platform/common/file_store.cpp
+      src/platform/common/unsupported.cpp
+      src/platform/linux/capture.cpp
+      src/platform/linux/display.cpp
+      src/platform/linux/encoder.cpp
+      src/platform/linux/pointer.cpp
+      src/platform/linux/portal.cpp
+      src/platform/linux/system.cpp
+      src/platform/posix/process.cpp
+    )
+    target_link_libraries(spanly_platform PUBLIC spanly_core PkgConfig::SPANLY_LINUX)
+  else()
+    message(STATUS "GStreamer/GLib development files not found: building the core and tests only")
+  endif()
+endif()
+
 if(TARGET spanly_platform)
   add_executable(spanly
     src/app/main.cpp
@@ -85,6 +122,12 @@ if(TARGET spanly_platform)
     src/app/stats.cpp
   )
   target_link_libraries(spanly PRIVATE spanly_platform)
+  if(WIN32)
+    set_target_properties(spanly PROPERTIES WIN32_EXECUTABLE ON) # no console window
+    if(MSVC)
+      target_link_options(spanly PRIVATE /ENTRY:mainCRTStartup)
+    endif()
+  endif()
 endif()
 
 # Tests: the shared protocol, crypto and flow-control rules (same vectors as the Android app).

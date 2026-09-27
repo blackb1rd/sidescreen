@@ -35,6 +35,10 @@ void Controller::showTabletScreen() {
             },
     };
     window_ = platform::VideoWindow::create(s->name(), std::move(input));
+    if (!window_) {
+        log("showing the tablet's screen isn't available on this system yet");
+        return;
+    }
     {
         std::scoped_lock l(shareLock_);
         shareSession_ = s;

@@ -95,4 +95,12 @@ struct Hello {
 /// Splits an Annex-B stream into NAL units (without start codes).
 std::vector<ByteView> nalUnits(ByteView s);
 
+/// An H.264 access unit with its parameter sets (SPS, PPS) moved out, for encoders that put
+/// them inline: CONFIG carries them, FRAME only the picture. Both stay Annex-B.
+struct SplitAccessUnit {
+    Bytes picture;
+    std::optional<Bytes> config; // on keyframes
+};
+SplitAccessUnit splitParameterSets(ByteView annexB);
+
 } // namespace spanly
