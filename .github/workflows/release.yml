@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            archive: sidescreen-linux-x86_64.tar.gz
+          - os: windows-latest
+            archive: sidescreen-windows-x86_64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libusb-1.0-0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - run: cargo build --release
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist/sidescreen
+          cp target/release/sidescreen README.md LICENSE packaging/linux/70-sidescreen.rules dist/sidescreen/
+          tar -C dist -czf ${{ matrix.archive }} sidescreen
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/sidescreen | Out-Null
+          Copy-Item target/release/sidescreen.exe, README.md, LICENSE dist/sidescreen/
+          Compress-Archive -Path dist/sidescreen -DestinationPath ${{ matrix.archive }}
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          merge-multiple: true
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" sidescreen-* --generate-notes --prerelease
