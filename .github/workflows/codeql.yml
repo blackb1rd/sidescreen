@@ -25,13 +25,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+      # The dependencies (mbedTLS, libusb) first, before CodeQL watches: only Spanly's code is analyzed.
+      # Without sccache: CodeQL has to see every file of ours compiled.
+      - run: cmake --preset linux-release -DSPANLY_SCCACHE=OFF && cmake --build --preset linux-release --target spanly_dependencies
       - uses: github/codeql-action/init@v4
         with:
           languages: c-cpp
           build-mode: manual
           queries: security-extended
-      # Without sccache: CodeQL has to see every file compiled.
-      - run: cmake --preset linux-release -DSPANLY_SCCACHE=OFF && cmake --build --preset linux-release --parallel
+      - run: cmake --build --preset linux-release --parallel
       - uses: github/codeql-action/analyze@v4
         with:
           category: /language:c-cpp

@@ -5,6 +5,10 @@
 #include <ctime>
 #include <mutex>
 
+#ifndef _WIN32
+#include <fcntl.h>
+#endif
+
 namespace spanly {
 namespace {
 std::mutex gLock;
@@ -18,7 +22,9 @@ void setLogFile(const std::string& path) {
 #ifdef _WIN32
     if (fopen_s(&gFile, path.c_str(), "a") != 0) gFile = nullptr;
 #else
-    gFile = std::fopen(path.c_str(), "a");
+    // Only this user may read it (it names devices and networks).
+    int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0600);
+    gFile = fd >= 0 ? fdopen(fd, "a") : nullptr;
 #endif
 }
 

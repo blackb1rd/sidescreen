@@ -149,10 +149,10 @@ void TcpLink::readLoop() {
     net::setReceiveTimeout(socket_, 1000);
     Bytes raw;
     Reader reader;
-    uint8_t chunk[64 * 1024];
+    Bytes chunk(64 * 1024);
     bool keysReady = !secret_;
     while (true) {
-        long n = net::receive(socket_, chunk, sizeof chunk);
+        long n = net::receive(socket_, chunk.data(), chunk.size());
         {
             std::scoped_lock l(m_);
             if (closed_) return;
@@ -165,11 +165,11 @@ void TcpLink::readLoop() {
         }
         lastReceive_ = Clock::now().time_since_epoch().count();
         if (!secret_) {
-            reader.push(ByteView(chunk, size_t(n)));
+            reader.push(ByteView(chunk.data(), size_t(n)));
             drain(reader);
             continue;
         }
-        raw.insert(raw.end(), chunk, chunk + n);
+        raw.insert(raw.end(), chunk.begin(), chunk.begin() + n);
         if (!keysReady) {
             if (raw.size() < crypto::kMagic.size() + crypto::kNonceSize) continue;
             if (!handshake(raw, *secret_)) return close("not paired");

@@ -28,3 +28,7 @@ FetchContent_Declare(libusb
   EXCLUDE_FROM_ALL)
 FetchContent_MakeAvailable(libusb)
 add_library(spanly::libusb ALIAS usb-1.0)
+
+# Every dependency, built on its own (CodeQL builds these before it starts watching the compiler).
+add_custom_target(spanly_dependencies)
+add_dependencies(spanly_dependencies mbedcrypto usb-1.0)
