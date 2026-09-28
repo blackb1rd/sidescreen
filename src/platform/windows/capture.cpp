@@ -1,9 +1,13 @@
 // Capture on Windows: DXGI Desktop Duplication. Frames arrive only when the screen changes,
-// already on the GPU; they're copied to a CPU texture and converted to NV12 at the stream size.
+// already on the GPU. With a hardware encoder on that GPU they stay there: the video processor
+// converts them to NV12 at the stream size (the GPU path). Otherwise they're copied to the CPU
+// and converted there for the software encoder.
 #include "core/log.hpp"
 #include "platform/platform.hpp"
+#include "platform/windows/d3d.hpp"
 #include "platform/windows/win.hpp"
 
+#include <d3d10.h>
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <wrl/client.h>
@@ -52,6 +56,8 @@ struct Duplicator {
     ComPtr<IDXGIOutputDuplication> dup;
     ComPtr<ID3D11Texture2D> staging;
     UINT stagingW = 0, stagingH = 0;
+    bool gpu = false; // the GPU path (see the top of the file)
+    std::unique_ptr<win::GpuConverter> converter;
 
     bool open(const std::wstring& deviceName) {
         ComPtr<IDXGIFactory1> factory;
@@ -66,9 +72,11 @@ struct Duplicator {
                 ComPtr<IDXGIOutput1> output1;
                 if (FAILED(output.As(&output1))) return false;
                 if (FAILED(D3D11CreateDevice(adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr,
-                                             D3D11_CREATE_DEVICE_BGRA_SUPPORT, nullptr, 0, D3D11_SDK_VERSION, &device,
-                                             nullptr, &context)))
+                                             D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+                                             nullptr, 0, D3D11_SDK_VERSION, &device, nullptr, &context)))
                     return false;
+                if (ComPtr<ID3D10Multithread> mt; SUCCEEDED(device.As(&mt))) mt->SetMultithreadProtected(TRUE);
+                gpu = win::hardwareEncoderAvailable(adapter.Get());
                 return SUCCEEDED(output1->DuplicateOutput(device.Get(), &dup));
             }
         }
@@ -76,7 +84,7 @@ struct Duplicator {
     }
 
     /// Wait up to `ms` for a changed picture: 1 = new picture in `out`, 0 = nothing changed, -1 = lost.
-    int next(UINT ms, int w, int h, Bytes& out) {
+    int next(UINT ms, int w, int h, win::WinFrame& out) {
         DXGI_OUTDUPL_FRAME_INFO info{};
         ComPtr<IDXGIResource> resource;
         HRESULT hr = dup->AcquireNextFrame(ms, &info, &resource);
@@ -90,6 +98,18 @@ struct Duplicator {
         resource.As(&tex);
         D3D11_TEXTURE2D_DESC d{};
         tex->GetDesc(&d);
+        if (gpu) {
+            if (!converter || converter->srcW() != int(d.Width) || converter->srcH() != int(d.Height) ||
+                converter->dstW() != w || converter->dstH() != h)
+                converter = win::GpuConverter::create(device.Get(), int(d.Width), int(d.Height), w, h);
+            if (converter) {
+                out.texture = converter->convert(tex.Get());
+                dup->ReleaseFrame();
+                return out.texture ? 1 : 0;
+            }
+            gpu = false; // no video processor for this: the CPU path from now on
+            log("screen capture: converting on the CPU (the GPU's video processor isn't available)");
+        }
         if (!staging || stagingW != d.Width || stagingH != d.Height) {
             D3D11_TEXTURE2D_DESC sd = d;
             sd.MipLevels = sd.ArraySize = 1;
@@ -111,7 +131,7 @@ struct Duplicator {
         D3D11_MAPPED_SUBRESOURCE mapped{};
         if (FAILED(context->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped))) return -1;
         bgraToNv12(static_cast<const uint8_t*>(mapped.pData), int(d.Width), int(d.Height), int(mapped.RowPitch), w, h,
-                   out);
+                   out.nv12);
         context->Unmap(staging.Get(), 0);
         return 1;
     }
@@ -176,7 +196,7 @@ private:
         auto last = Clock::now() - interval;
         while (running_) {
             int w = w_, h = h_;
-            auto buffer = std::make_shared<Bytes>();
+            auto buffer = std::make_shared<win::WinFrame>();
             int r = dup.next(100, w, h, *buffer);
             if (r < 0) { // e.g. the resolution changed or a full-screen app took over
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
