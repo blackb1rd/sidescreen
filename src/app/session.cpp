@@ -61,8 +61,9 @@ void TabletSession::pause() {
         auto s = weak.lock();
         if (!s || s->paused_.exchange(true)) return;
         log("stopped sharing to {}; choose \"Resume Sharing\" in the Spanly menu to share again", s->name());
+        s->link()->send(Msg::StreamStop); // the tablet drops the last picture
         Bytes off{0};
-        s->link()->send(Msg::Display, off); // the tablet may let its screen sleep
+        s->link()->send(Msg::Display, off); // and may let its screen sleep
         s->stop([weak] {
             if (auto s = weak.lock()) s->c_.updateSpeakers();
         });

@@ -9,6 +9,7 @@ void TabletSession::hello(const Hello& h) {
     lastHello_ = h;
     ++teardownGeneration_;
     if (paused_) { // reconnecting doesn't undo the user's "stop sharing"
+        link()->send(Msg::StreamStop);
         Bytes off{0};
         link()->send(Msg::Display, off);
         return;

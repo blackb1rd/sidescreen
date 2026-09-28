@@ -49,6 +49,7 @@ message instead of a zero-length packet.
 | 9 | SHARE_STOP | 0 | stop showing your screen |
 | 29 | UDP_OFFER | 18 | Wi-Fi only: token (16 bytes) + UDP port u16; register there to get the video as datagrams |
 | 30 | UDP_READY | 0 | from now on FRAME and CONFIG come over UDP |
+| 32 | STREAM_STOP | 0 | the user stopped sharing on the computer: drop the picture and show a "stopped" screen until the next SIZE |
 | 26 | MIC_START | 0 | send your microphone (MIC_AUDIO) — the Mac plays it into its "Spanly Microphone" device |
 | 27 | MIC_STOP | 0 | stop sending your microphone |
 | 20 | REMOTE_POINTER | 9 | action u8 (0 down, 1 move, 2 up, 3 long press), x f32, y f32 |

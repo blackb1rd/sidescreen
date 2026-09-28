@@ -33,8 +33,9 @@ enum class Msg : uint8_t {
     RemoteKey = 22,
     MicStart = 26,
     MicStop = 27,
-    UdpOffer = 29, // token (16) + UDP port u16: send your video registration there
-    UdpReady = 30, // video now comes over UDP
+    UdpOffer = 29,   // token (16) + UDP port u16: send your video registration there
+    UdpReady = 30,   // video now comes over UDP
+    StreamStop = 32, // sharing stopped (paused): drop the picture until the next SIZE
     // Tablet -> host
     Touch = 10,
     Hello = 11,
