@@ -14,6 +14,7 @@
 #include <condition_variable>
 #include <deque>
 #include <map>
+#include <set>
 #include <thread>
 
 struct libusb_context;
@@ -77,9 +78,12 @@ private:
     bool helloSeen_ = false;
     std::optional<UsbTablet> open_;
     /// Accessory sessions in a row that ended without a HELLO, per tablet: a tablet left in
-    /// accessory mode by an older version (other identity strings) ignores us.
+    /// accessory mode by an older version (other identity strings) ignores us, and is reset once.
+    /// A tablet that has answered in this run is never reset: its app was closed on purpose, and
+    /// a reset would make Android open it again.
     std::map<std::string, int> silentOpens_;
-    std::map<std::string, std::chrono::steady_clock::time_point> lastRedo_; // scanner thread only
+    std::set<std::string> answered_;
+    std::set<std::string> reset_;
 };
 
 } // namespace spanly

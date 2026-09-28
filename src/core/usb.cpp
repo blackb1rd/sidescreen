@@ -125,12 +125,9 @@ void UsbLink::scan() {
         bool redo = false;
         if (isAccessory(d)) {
             std::scoped_lock l(m_);
-            auto last = lastRedo_.find(serial);
-            if (silentOpens_[serial] >= 2 &&
-                (last == lastRedo_.end() || std::chrono::steady_clock::now() - last->second > 60s)) {
+            if (silentOpens_[serial] >= 2 && !answered_.contains(serial) && reset_.insert(serial).second) {
                 redo = true;
                 silentOpens_[serial] = 0;
-                lastRedo_[serial] = std::chrono::steady_clock::now();
                 lastSwitch_.erase(serial);
             }
         }

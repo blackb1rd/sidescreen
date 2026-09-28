@@ -15,6 +15,7 @@ void UsbLink::handle(const Message& m) {
             std::scoped_lock l(m_);
             first = !helloSeen_;
             helloSeen_ = true;
+            if (open_) answered_.insert(open_->serial);
         }
         if (first) log("tablet connected over USB accessory");
     }
