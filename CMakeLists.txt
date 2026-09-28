@@ -103,6 +103,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
       src/platform/linux/pointer.cpp
       src/platform/linux/portal.cpp
       src/platform/linux/system.cpp
+      src/platform/linux/va.cpp
       src/platform/posix/process.cpp
     )
     target_link_libraries(spanly_platform PUBLIC spanly_core PkgConfig::SPANLY_LINUX)

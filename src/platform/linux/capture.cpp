@@ -1,7 +1,9 @@
 // Capture on Linux: GStreamer reads the portal's PipeWire stream and turns it into NV12 at the
-// stream size. Frames are GstSamples (the encoder takes the buffer without copying).
+// stream size: on the GPU with VA-API (frames stay in GPU memory, see va.hpp), else on the CPU.
+// Frames are GstSamples (the encoder takes the buffer without copying).
 #include "core/log.hpp"
 #include "platform/linux/portal.hpp"
+#include "platform/linux/va.hpp"
 #include "platform/platform.hpp"
 
 #include <gst/app/gstappsink.h>
@@ -26,12 +28,14 @@ public:
         auto* s = portal::sessionFor(id);
         if (!s) return done("no desktop portal stream for this display");
         GError* error = nullptr;
+        gpu_ = va::available();
+        contextSaved_ = false;
         // The first caps ask the compositor for a virtual monitor of the tablet's size.
         std::string desc = std::format(
-            "pipewiresrc name=src do-timestamp=true keepalive-time=1000 ! capsfilter name=want ! videoconvert ! "
-            "videoscale ! capsfilter name=raw caps=video/x-raw,format=NV12,width={},height={} ! "
-            "videorate max-rate={} drop-only=true ! appsink name=sink sync=false max-buffers=2 drop=true",
-            width, height, fps);
+            "pipewiresrc name=src do-timestamp=true keepalive-time=1000 ! capsfilter name=want ! {} ! "
+            "capsfilter name=raw ! videorate max-rate={} drop-only=true ! appsink name=sink sync=false max-buffers=2 "
+            "drop=true",
+            gpu_ ? "vapostproc name=post" : "videoconvert ! videoscale", fps);
         pipeline_ = gst_parse_launch(desc.c_str(), &error);
         if (!pipeline_) {
             std::string e = error ? error->message : "GStreamer pipeline";
@@ -95,11 +99,12 @@ private:
         if (!pipeline_) return;
         for (const char* name : {"want", "raw"}) {
             GstElement* filter = gst_bin_get_by_name(GST_BIN(pipeline_), name);
-            GstCaps* caps = std::string(name) == "raw"
-                                ? gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "NV12", "width",
+            bool raw = std::string(name) == "raw";
+            GstCaps* caps = raw ? gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "NV12", "width",
                                                       G_TYPE_INT, width, "height", G_TYPE_INT, height, nullptr)
                                 : gst_caps_new_simple("video/x-raw", "width", G_TYPE_INT, width, "height", G_TYPE_INT,
                                                       height, nullptr);
+            if (raw && gpu_) gst_caps_set_features(caps, 0, gst_caps_features_new("memory:VAMemory", nullptr));
             g_object_set(filter, "caps", caps, nullptr);
             gst_caps_unref(caps);
             gst_object_unref(filter);
@@ -108,6 +113,15 @@ private:
 
     void sample(GstSample* s) {
         if (!s) return;
+        if (gpu_ && !contextSaved_) { // the encoder must use the same VA display
+            GstElement* post = gst_bin_get_by_name(GST_BIN(pipeline_), "post");
+            if (GstContext* ctx = post ? gst_element_get_context(post, "gst.va.display.handle") : nullptr) {
+                va::setDisplayContext(ctx);
+                gst_context_unref(ctx);
+                contextSaved_ = true;
+            }
+            if (post) gst_object_unref(post);
+        }
         GstCaps* caps = gst_sample_get_caps(s);
         GstStructure* st = caps ? gst_caps_get_structure(caps, 0) : nullptr;
         int w = 0, h = 0;
@@ -134,6 +148,8 @@ private:
     }
 
     GstElement* pipeline_ = nullptr;
+    bool gpu_ = false;
+    bool contextSaved_ = false; // capture thread
     std::mutex m_;
     std::optional<Frame> last_;
 };

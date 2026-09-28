@@ -2,6 +2,7 @@
 // falling back to software (x264, OpenH264). Low latency: no B-frames, constant bitrate,
 // keyframes on request.
 #include "core/log.hpp"
+#include "platform/linux/va.hpp"
 #include "platform/platform.hpp"
 
 #include <gst/app/gstappsink.h>
@@ -115,27 +116,38 @@ private:
 
 } // namespace
 
-std::unique_ptr<Encoder> Encoder::create(int width, int height, int fps, int bitrate, Codec codec) {
-    if (codec != Codec::H264) return nullptr; // HEVC: H.264 is what every Linux setup can encode
-    gst_init(nullptr, nullptr);
-    const std::pair<const char*, bool>* found = nullptr;
-    for (const auto& e : kEncoders) {
-        if (GstElementFactory* f = gst_element_factory_find(e.first)) {
-            gst_object_unref(f);
-            found = &e;
-            break;
+namespace {
+
+/// The encoder pipeline for frames with these caps: VA-API for GPU frames (same VA display as the
+/// capture), else the best encoder installed.
+std::unique_ptr<Encoder> build(GstCaps* frameCaps, int width, int height, int fps, int bitrate) {
+    bool gpu = gst_caps_features_contains(gst_caps_get_features(frameCaps, 0), "memory:VAMemory");
+    std::pair<const char*, bool> choice{nullptr, true};
+    if (gpu) {
+        choice = {va::encoderName(), true};
+    } else {
+        for (const auto& e : kEncoders) {
+            if (GstElementFactory* f = gst_element_factory_find(e.first)) {
+                gst_object_unref(f);
+                choice = e;
+                break;
+            }
         }
     }
-    if (!found) {
+    if (!choice.first) {
         log("no H.264 encoder found: install gstreamer1.0-plugins-bad (VA-API) or -ugly (x264)");
         return nullptr;
     }
+    GstCaps* caps = gst_caps_copy(frameCaps);
+    gst_caps_set_simple(caps, "framerate", GST_TYPE_FRACTION, fps, 1, nullptr);
+    gchar* capsText = gst_caps_to_string(caps);
+    gst_caps_unref(caps);
     std::string desc =
-        std::format("appsrc name=src is-live=true format=time do-timestamp=true "
-                    "caps=video/x-raw,format=NV12,width={},height={},framerate={}/1 ! {} name=enc ! "
+        std::format("appsrc name=src is-live=true format=time do-timestamp=true caps=\"{}\" ! {} name=enc ! "
                     "h264parse config-interval=-1 ! video/x-h264,stream-format=byte-stream,alignment=au ! "
                     "appsink name=sink sync=false max-buffers=4 drop=false",
-                    width, height, fps, found->first);
+                    capsText, choice.first);
+    g_free(capsText);
     GError* error = nullptr;
     GstElement* pipeline = gst_parse_launch(desc.c_str(), &error);
     if (!pipeline) {
@@ -143,9 +155,13 @@ std::unique_ptr<Encoder> Encoder::create(int width, int height, int fps, int bit
         if (error) g_error_free(error);
         return nullptr;
     }
+    if (GstContext* ctx = gpu ? va::displayContext() : nullptr) {
+        gst_element_set_context(pipeline, ctx); // the capture's VA display: no copy between them
+        gst_context_unref(ctx);
+    }
     GstElement* enc = gst_bin_get_by_name(GST_BIN(pipeline), "enc");
     // Low latency: no B-frames, constant bitrate, a keyframe only every 10 s (plus on request).
-    setIfPresent(enc, "bitrate", std::to_string(found->second ? bitrate / 1000 : bitrate));
+    setIfPresent(enc, "bitrate", std::to_string(choice.second ? bitrate / 1000 : bitrate));
     setIfPresent(enc, "rate-control", "cbr");
     for (const char* p : {"b-frames", "bframes", "max-bframes"})
         setIfPresent(enc, p, "0");
@@ -155,9 +171,50 @@ std::unique_ptr<Encoder> Encoder::create(int width, int height, int fps, int bit
     setIfPresent(enc, "speed-preset", "ultrafast");
     setIfPresent(enc, "preset", "low-latency-hp");
     setIfPresent(enc, "target-usage", "7");
-    log("H.264 encoder: {}", found->first);
-    return std::make_unique<GstEncoder>(pipeline, gst_bin_get_by_name(GST_BIN(pipeline), "src"), enc, found->second,
+    log("H.264 encoder: {}{}", choice.first, gpu ? " (frames stay on the GPU)" : "");
+    return std::make_unique<GstEncoder>(pipeline, gst_bin_get_by_name(GST_BIN(pipeline), "src"), enc, choice.second,
                                         width, height);
+}
+
+/// Built with the first frame, whose caps say whether it is in GPU memory.
+class LazyEncoder : public Encoder {
+public:
+    LazyEncoder(int w, int h, int fps, int bitrate) : w_(w), h_(h), fps_(fps), bitrate_(bitrate) {}
+    Codec codec() const override { return Codec::H264; }
+    int width() const override { return w_; }
+    int height() const override { return h_; }
+    void requestKeyframe() override {
+        if (inner_) inner_->requestKeyframe();
+    }
+    void setBitrate(int bps) override {
+        bitrate_ = bps;
+        if (inner_) inner_->setBitrate(bps);
+    }
+    void encode(const Frame& frame) override {
+        if (!inner_ && !failed_) {
+            GstCaps* caps = gst_sample_get_caps(static_cast<GstSample*>(frame.image.get()));
+            inner_ = caps ? build(caps, w_, h_, fps_, bitrate_) : nullptr;
+            failed_ = !inner_;
+            if (inner_)
+                inner_->onFrame = [this](Bytes au, bool key, std::optional<Bytes> config, Clock::time_point t) {
+                    if (onFrame) onFrame(std::move(au), key, std::move(config), t);
+                };
+        }
+        if (inner_) inner_->encode(frame);
+    }
+
+private:
+    int w_, h_, fps_, bitrate_;
+    bool failed_ = false;
+    std::unique_ptr<Encoder> inner_; // capture thread
+};
+
+} // namespace
+
+std::unique_ptr<Encoder> Encoder::create(int width, int height, int fps, int bitrate, Codec codec) {
+    if (codec != Codec::H264) return nullptr; // HEVC: H.264 is what every Linux setup can encode
+    gst_init(nullptr, nullptr);
+    return std::make_unique<LazyEncoder>(width, height, fps, bitrate);
 }
 
 } // namespace spanly::platform
