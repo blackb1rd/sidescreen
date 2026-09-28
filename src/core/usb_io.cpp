@@ -33,6 +33,11 @@ void UsbLink::readLoop(libusb_device_handle* h, uint8_t ep) {
         }
         int got = 0;
         int r = libusb_bulk_transfer(h, ep, chunk.data(), int(chunk.size()), &got, 3000);
+        {
+            // Closed while this read was waiting: whatever arrived belongs to the next session.
+            std::scoped_lock l(m_);
+            if (handle_ != h) return;
+        }
         if (got > 0) {
             reader.push(ByteView(chunk.data(), size_t(got)));
             drain(reader);
