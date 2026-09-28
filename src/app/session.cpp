@@ -191,6 +191,9 @@ void TabletSession::startPipeline() {
                 s->c_.onBattery() ? " (on battery)" : "", enc->codec() == Codec::Hevc ? "hevc" : "h264", mbps);
             if (s->link()->connected()) {
                 s->flow_.setMaxInFlight(s->onWifi() ? 6 : 3);
+                // Streaming again (e.g. after "Resume Sharing"): the tablet keeps its screen on.
+                Bytes awake{uint8_t(s->c_.displayOn() ? 1 : 0)};
+                s->link()->send(Msg::Display, awake);
                 if (sizeChanged) s->sendSize();
                 enc->requestKeyframe();
             }
