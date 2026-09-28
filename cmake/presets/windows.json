@@ -2,8 +2,8 @@
   "version": 12,
   "include": ["common.json"],
   "configurePresets": [
-    { "name": "windows", "displayName": "Windows (Visual Studio 2022, x64)", "inherits": "base",
-      "generator": "Visual Studio 17 2022", "architecture": "x64",
+    { "name": "windows", "displayName": "Windows (newest Visual Studio, x64)", "inherits": "base",
+      "architecture": "x64",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } }
   ],
   "buildPresets": [

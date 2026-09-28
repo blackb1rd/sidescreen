@@ -110,7 +110,7 @@ ones for your computer.
 
 ```sh
 cmake --workflow linux-release        # configure, build, test (CTest), package (CPack) -> dist/
-cmake --workflow windows-release      # same on Windows (Visual Studio 2022) -> dist/*.zip
+cmake --workflow windows-release      # same on Windows (Visual Studio) -> dist/*.zip
 cmake --workflow macos-release        # configure, build, test on the Mac
 
 # or step by step, e.g. a debug build:
