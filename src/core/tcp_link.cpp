@@ -175,7 +175,7 @@ void TcpLink::readLoop() {
             if (!handshake(raw, *secret_)) return close("not paired");
             keysReady = true;
         }
-        if (!openRecords(raw, reader)) {
+        if (!opener_->open(raw, reader)) {
             logUnpaired(peer_);
             return close("failed authentication");
         }
@@ -188,31 +188,21 @@ bool TcpLink::handshake(Bytes& raw, const Bytes& secret) {
     if (std::memcmp(raw.data(), crypto::kMagic.data(), crypto::kMagic.size()) != 0) return false;
     ByteView clientNonce(raw.data() + crypto::kMagic.size(), crypto::kNonceSize);
     Bytes serverNonce = crypto::random(crypto::kNonceSize);
-    keys_ = crypto::serverKeys(secret, clientNonce, serverNonce);
+    crypto::Keys keys = crypto::serverKeys(secret, clientNonce, serverNonce);
+    {
+        std::scoped_lock l(m_); // the writer thread reads sealer_
+        sealer_.emplace(keys.send);
+    }
+    opener_.emplace(keys.receive);
     udpKey_ = crypto::udpKey(secret, clientNonce, serverNonce);
     raw.erase(raw.begin(), raw.begin() + ptrdiff_t(crypto::kMagic.size() + crypto::kNonceSize));
     return net::sendAll(socket_, serverNonce);
 }
 
-/// Records: length u32 + AES-256-GCM(ciphertext || tag).
-bool TcpLink::openRecords(Bytes& raw, Reader& reader) {
-    size_t off = 0;
-    while (raw.size() - off >= 4) {
-        size_t len = u32At(raw, off);
-        if (len > kMaxRecord) return false;
-        if (raw.size() - off < 4 + len) break;
-        auto plain = crypto::open(ByteView(raw.data() + off + 4, len), keys_.receive, receiveCounter_++);
-        if (!plain) return false;
-        reader.push(*plain);
-        off += 4 + len;
-    }
-    raw.erase(raw.begin(), raw.begin() + ptrdiff_t(off));
-    return true;
-}
-
 void TcpLink::writeLoop() {
     while (true) {
         Bytes next;
+        RecordSealer* sealer = nullptr;
         {
             std::unique_lock l(m_);
             // An idle screen sends nothing: heartbeat every 0.5 s so the tablet knows we're here.
@@ -224,15 +214,13 @@ void TcpLink::writeLoop() {
             if (closed_) return;
             next = std::move(queue_.front());
             queue_.pop_front();
+            if (secret_ && !sealer_) { // nothing goes out before the Wi-Fi handshake
+                if (pending_ > 0) --pending_;
+                continue;
+            }
+            sealer = sealer_ ? &*sealer_ : nullptr;
         }
-        Bytes wire;
-        if (secret_) {
-            Bytes sealed = crypto::seal(next, keys_.send, sendCounter_++);
-            putU32(wire, uint32_t(sealed.size()));
-            wire.insert(wire.end(), sealed.begin(), sealed.end());
-        } else {
-            wire = std::move(next);
-        }
+        Bytes wire = sealer ? sealer->seal(next) : std::move(next);
         bool ok = net::sendAll(socket_, wire);
         {
             std::scoped_lock l(m_);

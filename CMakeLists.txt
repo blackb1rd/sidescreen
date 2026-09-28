@@ -16,7 +16,6 @@ if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "")
 endif()
 
-option(SPANLY_SANITIZE "Build with AddressSanitizer and UBSan" OFF)
 
 # sccache, when installed, caches compiled objects across build folders (and in CI across runs).
 # Visual Studio projects can't use a compiler launcher, so Windows builds without it.
@@ -42,6 +41,7 @@ add_library(spanly_core STATIC
   src/core/usb.cpp
   src/core/usb_io.cpp
   src/core/udp_video.cpp
+  src/core/records.cpp
 )
 target_include_directories(spanly_core PUBLIC src "${PROJECT_BINARY_DIR}/generated")
 configure_file(cmake/version.hpp.in generated/spanly_version.hpp @ONLY)
@@ -59,10 +59,7 @@ if(MSVC)
 else()
   target_compile_options(spanly_core PUBLIC -Wall -Wextra -Wpedantic -Wno-gnu-zero-variadic-macro-arguments)
 endif()
-if(SPANLY_SANITIZE)
-  target_compile_options(spanly_core PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
-  target_link_options(spanly_core PUBLIC -fsanitize=address,undefined)
-endif()
+include(cmake/Checks.cmake) # sanitizers and fuzzing
 
 # The app: the shared session logic (src/app) on top of a platform backend.
 if(APPLE)
@@ -151,8 +148,11 @@ endif()
 
 # Tests: the shared protocol, crypto and flow-control rules (same vectors as the Android app).
 enable_testing()
-add_executable(spanly_tests tests/main.cpp tests/protocol_test.cpp tests/crypto_test.cpp tests/flow_test.cpp)
+add_executable(spanly_tests tests/main.cpp tests/protocol_test.cpp tests/crypto_test.cpp tests/flow_test.cpp tests/link_test.cpp)
 target_link_libraries(spanly_tests PRIVATE spanly_core)
 add_test(NAME spanly_tests COMMAND spanly_tests)
+if(SPANLY_FUZZ)
+  add_subdirectory(fuzz)
+endif()
 
 include(cmake/Packaging.cmake)

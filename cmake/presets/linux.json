@@ -9,20 +9,26 @@
     { "name": "linux-asan", "displayName": "Linux debug with AddressSanitizer and UBSan",
       "inherits": ["linux", "ninja-debug", "clang", "sanitize"] },
     { "name": "linux-tidy", "displayName": "Linux debug with clang, for clang-tidy",
-      "inherits": ["linux", "ninja-debug", "clang"] }
+      "inherits": ["linux", "ninja-debug", "clang"] },
+    { "name": "linux-tsan", "displayName": "Linux debug with ThreadSanitizer", "inherits": ["linux", "ninja-debug", "clang", "tsan"] },
+    { "name": "linux-fuzz", "displayName": "Linux fuzzers (libFuzzer, AddressSanitizer, UBSan)", "inherits": ["linux", "fuzz", "clang"] }
   ],
   "buildPresets": [
     { "name": "linux-only-build", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
     { "name": "linux-release", "inherits": "linux-only-build", "configurePreset": "linux-release" },
     { "name": "linux-debug", "inherits": "linux-only-build", "configurePreset": "linux-debug" },
     { "name": "linux-asan", "inherits": "linux-only-build", "configurePreset": "linux-asan" },
-    { "name": "linux-tidy", "inherits": "linux-only-build", "configurePreset": "linux-tidy" }
+    { "name": "linux-tidy", "inherits": "linux-only-build", "configurePreset": "linux-tidy" },
+    { "name": "linux-tsan", "inherits": "linux-only-build", "configurePreset": "linux-tsan" },
+    { "name": "linux-fuzz", "inherits": "linux-only-build", "configurePreset": "linux-fuzz" }
   ],
   "testPresets": [
     { "name": "linux-only-test", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
     { "name": "linux-release", "inherits": "linux-only-test", "configurePreset": "linux-release", "output": { "outputOnFailure": true } },
     { "name": "linux-debug", "inherits": "linux-only-test", "configurePreset": "linux-debug", "output": { "outputOnFailure": true } },
-    { "name": "linux-asan", "inherits": "linux-only-test", "configurePreset": "linux-asan", "output": { "outputOnFailure": true } }
+    { "name": "linux-asan", "inherits": "linux-only-test", "configurePreset": "linux-asan", "output": { "outputOnFailure": true } },
+    { "name": "linux-tsan", "inherits": "linux-only-test", "configurePreset": "linux-tsan", "output": { "outputOnFailure": true } },
+    { "name": "linux-fuzz", "inherits": "linux-only-test", "configurePreset": "linux-fuzz", "output": { "outputOnFailure": true } }
   ],
   "packagePresets": [
     { "name": "linux-only-package", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
@@ -35,6 +41,12 @@
       { "type": "test", "name": "linux-release" }, { "type": "package", "name": "linux-release" } ] },
     { "name": "linux-asan", "displayName": "Linux: tests under AddressSanitizer and UBSan", "steps": [
       { "type": "configure", "name": "linux-asan" }, { "type": "build", "name": "linux-asan" },
-      { "type": "test", "name": "linux-asan" } ] }
+      { "type": "test", "name": "linux-asan" } ] },
+    { "name": "linux-tsan", "displayName": "Linux: tests under ThreadSanitizer", "steps": [
+      { "type": "configure", "name": "linux-tsan" }, { "type": "build", "name": "linux-tsan" },
+      { "type": "test", "name": "linux-tsan" } ] },
+    { "name": "linux-fuzz", "displayName": "Linux: build the fuzzers and run each for 30 s", "steps": [
+      { "type": "configure", "name": "linux-fuzz" }, { "type": "build", "name": "linux-fuzz" },
+      { "type": "test", "name": "linux-fuzz" } ] }
   ]
 }

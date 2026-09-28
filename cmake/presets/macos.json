@@ -11,24 +11,38 @@
     { "name": "macos-asan", "displayName": "macOS debug with AddressSanitizer and UBSan",
       "inherits": ["macos", "ninja-debug", "sanitize"] },
     { "name": "macos-universal", "displayName": "macOS release, Apple silicon + Intel (for Spanly.app)",
-      "inherits": ["macos", "ninja-release"], "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64" } }
+      "inherits": ["macos", "ninja-release"], "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64" } },
+    { "name": "macos-tsan", "displayName": "macOS debug with ThreadSanitizer", "inherits": ["macos", "ninja-debug", "tsan"] },
+    { "name": "macos-fuzz", "displayName": "macOS fuzzers (needs Homebrew llvm: Apple clang has no libFuzzer)",
+      "inherits": ["macos", "fuzz"],
+      "cacheVariables": { "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang", "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++" } }
   ],
   "buildPresets": [
     { "name": "macos-only-build", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" } },
     { "name": "macos-release", "inherits": "macos-only-build", "configurePreset": "macos-release" },
     { "name": "macos-debug", "inherits": "macos-only-build", "configurePreset": "macos-debug" },
     { "name": "macos-asan", "inherits": "macos-only-build", "configurePreset": "macos-asan" },
-    { "name": "macos-universal", "inherits": "macos-only-build", "configurePreset": "macos-universal", "targets": ["spanly"] }
+    { "name": "macos-universal", "inherits": "macos-only-build", "configurePreset": "macos-universal", "targets": ["spanly"] },
+    { "name": "macos-tsan", "inherits": "macos-only-build", "configurePreset": "macos-tsan" },
+    { "name": "macos-fuzz", "inherits": "macos-only-build", "configurePreset": "macos-fuzz" }
   ],
   "testPresets": [
     { "name": "macos-only-test", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" } },
     { "name": "macos-release", "inherits": "macos-only-test", "configurePreset": "macos-release", "output": { "outputOnFailure": true } },
     { "name": "macos-debug", "inherits": "macos-only-test", "configurePreset": "macos-debug", "output": { "outputOnFailure": true } },
-    { "name": "macos-asan", "inherits": "macos-only-test", "configurePreset": "macos-asan", "output": { "outputOnFailure": true } }
+    { "name": "macos-asan", "inherits": "macos-only-test", "configurePreset": "macos-asan", "output": { "outputOnFailure": true } },
+    { "name": "macos-tsan", "inherits": "macos-only-test", "configurePreset": "macos-tsan", "output": { "outputOnFailure": true } },
+    { "name": "macos-fuzz", "inherits": "macos-only-test", "configurePreset": "macos-fuzz", "output": { "outputOnFailure": true } }
   ],
   "workflowPresets": [
     { "name": "macos-release", "displayName": "macOS: configure, build and test (scripts/build-mac.sh makes Spanly.app)",
       "steps": [ { "type": "configure", "name": "macos-release" }, { "type": "build", "name": "macos-release" },
-        { "type": "test", "name": "macos-release" } ] }
+        { "type": "test", "name": "macos-release" } ] },
+    { "name": "macos-tsan", "displayName": "macOS: tests under ThreadSanitizer", "steps": [
+      { "type": "configure", "name": "macos-tsan" }, { "type": "build", "name": "macos-tsan" },
+      { "type": "test", "name": "macos-tsan" } ] },
+    { "name": "macos-fuzz", "displayName": "macOS: build the fuzzers and run each for 30 s", "steps": [
+      { "type": "configure", "name": "macos-fuzz" }, { "type": "build", "name": "macos-fuzz" },
+      { "type": "test", "name": "macos-fuzz" } ] }
   ]
 }

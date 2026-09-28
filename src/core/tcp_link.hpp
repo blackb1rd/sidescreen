@@ -8,6 +8,7 @@
 #include "core/flow.hpp"
 #include "core/link.hpp"
 #include "core/net.hpp"
+#include "core/records.hpp"
 #include "core/udp_video.hpp"
 
 #include <atomic>
@@ -42,7 +43,6 @@ private:
     void readLoop();
     void writeLoop();
     bool handshake(Bytes& raw, const Bytes& secret);
-    bool openRecords(Bytes& raw, Reader& reader);
     void queue(Bytes message);
     void offerUdp();
     bool sendUdp(Msg type, ByteView payload);
@@ -51,9 +51,10 @@ private:
     const Kind kind_;
     const std::optional<Bytes> secret_;
     const std::string peer_;
-    crypto::Keys keys_{};
-    uint64_t sendCounter_ = 0;    // writer thread only
-    uint64_t receiveCounter_ = 0; // reader thread only
+    // Wi-Fi only, set up by the handshake (reader thread). The writer thread seals with sealer_
+    // (set under m_); the reader thread opens with opener_.
+    std::optional<RecordSealer> sealer_;
+    std::optional<RecordOpener> opener_;
 
     mutable std::mutex m_;
     std::condition_variable wake_;

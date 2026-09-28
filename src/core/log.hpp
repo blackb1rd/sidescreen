@@ -15,4 +15,7 @@ void log(std::format_string<Args...> fmt, Args&&... args) {
 /// Also append log lines to this file (e.g. ~/Library/Logs/Spanly.log).
 void setLogFile(const std::string& path);
 
+/// Off: nothing goes to stderr (the fuzzers, which log millions of lines otherwise).
+void setLogToStderr(bool on);
+
 } // namespace spanly

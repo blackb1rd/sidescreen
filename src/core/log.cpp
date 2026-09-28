@@ -9,12 +9,18 @@ namespace spanly {
 namespace {
 std::mutex gLock;
 FILE* gFile = nullptr;
+bool gStderr = true;
 } // namespace
 
 void setLogFile(const std::string& path) {
     std::scoped_lock l(gLock);
     if (gFile) std::fclose(gFile);
     gFile = std::fopen(path.c_str(), "a");
+}
+
+void setLogToStderr(bool on) {
+    std::scoped_lock l(gLock);
+    gStderr = on;
 }
 
 void logLine(const std::string& message) {
@@ -28,7 +34,7 @@ void logLine(const std::string& message) {
     char stamp[16];
     std::strftime(stamp, sizeof stamp, "%H:%M:%S", &t);
     std::scoped_lock l(gLock);
-    std::fprintf(stderr, "[%s] %s\n", stamp, message.c_str());
+    if (gStderr) std::fprintf(stderr, "[%s] %s\n", stamp, message.c_str());
     if (gFile) {
         std::fprintf(gFile, "[%s] %s\n", stamp, message.c_str());
         std::fflush(gFile);

@@ -117,6 +117,26 @@ Socket accept(const Socket& listener, int timeoutMs, std::string* peer) {
     return s;
 }
 
+uint16_t localPort(const Socket& s) {
+    sockaddr_storage a{};
+    socklen len = sizeof a;
+    if (getsockname(s.handle(), reinterpret_cast<sockaddr*>(&a), &len) != 0) return 0;
+    return ntohs(a.ss_family == AF_INET6 ? reinterpret_cast<sockaddr_in6*>(&a)->sin6_port
+                                         : reinterpret_cast<sockaddr_in*>(&a)->sin_port);
+}
+
+Socket connectLoopback(uint16_t port) {
+    init();
+    Socket s(Handle(::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)));
+    if (!s.valid()) return {};
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_port = htons(port);
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (::connect(s.handle(), reinterpret_cast<sockaddr*>(&a), sizeof a) != 0) return {};
+    return s;
+}
+
 void setNoDelay(const Socket& s) {
     int one = 1;
     setsockopt(s.handle(), IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&one), sizeof one);

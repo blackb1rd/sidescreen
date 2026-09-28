@@ -13,6 +13,9 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
     { "name": "clang", "hidden": true,
       "cacheVariables": { "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" } },
-    { "name": "sanitize", "hidden": true, "cacheVariables": { "SPANLY_SANITIZE": "ON" } }
+    { "name": "sanitize", "hidden": true, "cacheVariables": { "SPANLY_SANITIZE": "address" } },
+    { "name": "tsan", "hidden": true, "cacheVariables": { "SPANLY_SANITIZE": "thread" } },
+    { "name": "fuzz", "hidden": true, "inherits": "base", "generator": "Ninja",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "SPANLY_FUZZ": "ON" } }
   ]
 }

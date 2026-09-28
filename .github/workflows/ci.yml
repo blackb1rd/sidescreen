@@ -55,7 +55,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
       - name: clang-format
-        run: clang-format --dry-run --Werror $(git ls-files 'src/*.cpp' 'src/*.hpp' 'tests/*.cpp' 'tests/*.hpp')
+        run: clang-format --dry-run --Werror $(git ls-files 'src/*.cpp' 'src/*.hpp' 'tests/*.cpp' 'tests/*.hpp' 'fuzz/*.cpp' 'fuzz/*.hpp')
       - name: Build with clang (for compile_commands.json)
         run: cmake --preset linux-tidy && cmake --build --preset linux-tidy --parallel
       - name: clang-tidy (the code built on Linux)
@@ -64,7 +64,7 @@ jobs:
             'src/platform/linux/*.cpp' 'src/platform/posix/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
           ! grep -E "(warning|error):" tidy.log
 
-  # The C++ core under AddressSanitizer and UBSan.
+  # The tests under AddressSanitizer and UBSan.
   sanitize:
     runs-on: ubuntu-latest
     steps:
@@ -73,7 +73,44 @@ jobs:
         with:
           cmakeVersion: "~4.4.0"
       - uses: mozilla-actions/sccache-action@v0.0.11
+      # Newer kernels randomise mmap more than the sanitizers' fixed memory layout allows.
+      - run: sudo sysctl vm.mmap_rnd_bits=28
       - run: cmake --workflow linux-asan
+
+  # The tests (including real TCP links with their reader and writer threads) under ThreadSanitizer.
+  tsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - run: sudo sysctl vm.mmap_rnd_bits=28
+      - run: cmake --workflow linux-tsan
+
+  # libFuzzer on everything that parses bytes from other devices, 30 s per fuzzer. The corpus it
+  # grows is kept between runs, so each run starts where the last one stopped.
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - run: sudo sysctl vm.mmap_rnd_bits=28
+      - uses: actions/cache@v4
+        with:
+          path: build/linux-fuzz/corpus
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+      - run: cmake --workflow linux-fuzz
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: fuzz-crashes
+          path: build/linux-fuzz/fuzz-crashes
 
   file-length:
     runs-on: ubuntu-latest
@@ -81,6 +118,6 @@ jobs:
       - uses: actions/checkout@v5
       - name: No source file over 500 lines
         run: |
-          long=$(find src tests scripts -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.sh' -o -name '*.py' \) \
+          long=$(find src tests fuzz scripts -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.sh' -o -name '*.py' \) \
                  -exec awk 'END { if (NR > 500) print FILENAME ": " NR " lines" }' {} \;)
           if [ -n "$long" ]; then echo "$long"; exit 1; fi

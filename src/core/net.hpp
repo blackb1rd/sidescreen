@@ -48,6 +48,11 @@ Socket listenTcp(uint16_t port, bool loopbackOnly);
 /// Wait up to `timeoutMs` for a connection; invalid socket on timeout.
 Socket accept(const Socket& listener, int timeoutMs, std::string* peer = nullptr);
 
+/// The port a socket is bound to (after listening on port 0, say).
+uint16_t localPort(const Socket& s);
+/// A TCP connection to `port` on 127.0.0.1 (the tests use it to play the tablet).
+Socket connectLoopback(uint16_t port);
+
 void setNoDelay(const Socket& s);
 void setReceiveTimeout(const Socket& s, int ms);
 bool sendAll(const Socket& s, ByteView data);
