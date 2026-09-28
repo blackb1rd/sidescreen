@@ -143,7 +143,8 @@ public:
 
 private:
     void begin(Obj content, DisplayId displayId, int width, int height, int fps, bool audio,
-               std::function<void(const std::string&)> done) { // by value: the blocks below keep a copy
+               // NOLINTNEXTLINE(performance-unnecessary-value-param): the blocks below keep a copy
+               std::function<void(const std::string&)> done) {
         Pool pool;
         Obj displays = send(content, "displays");
         Obj display = nullptr;

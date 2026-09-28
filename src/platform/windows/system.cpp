@@ -1,5 +1,6 @@
 // Windows: the message loop (main thread), paths, power and display events, the login item and
 // running helper programs.
+#include "core/env.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "platform/windows/win.hpp"
@@ -145,8 +146,7 @@ std::string computerName() {
 
 namespace {
 std::string knownDir(const char* var) {
-    const char* v = std::getenv(var);
-    std::string dir = std::string(v ? v : ".") + "\\Spanly";
+    std::string dir = env(var).value_or(".") + "\\Spanly";
     std::error_code ec;
     fs::create_directories(dir, ec);
     return dir;
@@ -162,8 +162,7 @@ std::string logFilePath() {
 }
 
 std::string homeDirectory() {
-    const char* home = std::getenv("USERPROFILE");
-    return home ? home : "C:\\";
+    return env("USERPROFILE").value_or("C:\\");
 }
 
 // MARK: Events and power

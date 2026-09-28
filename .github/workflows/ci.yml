@@ -64,6 +64,26 @@ jobs:
             'src/platform/linux/*.cpp' 'src/platform/posix/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
           ! grep -E "(warning|error):" tidy.log
 
+  # clang-tidy on the Mac code too (and the shared code as the Mac compiles it).
+  lint-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install clang-tidy==22.1.8
+      - name: Configure (for compile_commands.json)
+        run: cmake --preset macos-release
+      - name: clang-tidy (the code built on the Mac)
+        run: |
+          git ls-files 'src/core/*.cpp' 'src/app/*.cpp' 'src/platform/mac/*.cpp' 'src/platform/posix/*.cpp' 'tests/*.cpp' |
+            xargs -P 4 -n 4 clang-tidy -p build/macos-release --quiet --extra-arg=-isysroot"$(xcrun --show-sdk-path)" 2>&1 | tee tidy.log
+          ! grep -E "(warning|error):" tidy.log
+
   # The tests under AddressSanitizer and UBSan.
   sanitize:
     runs-on: ubuntu-latest

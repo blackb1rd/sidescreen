@@ -38,7 +38,7 @@ double number(const char* s) {
 
 } // namespace
 
-Options Options::parse(int argc, char** argv) {
+std::optional<Options> Options::parse(int argc, char** argv, int& exitCode) {
     Options o;
     for (int i = 1; i < argc; ++i) {
         std::string_view a = argv[i];
@@ -76,16 +76,19 @@ Options Options::parse(int argc, char** argv) {
         else if (a == "--no-udp")
             o.udp = false;
         else if (a == "--version") {
-            std::printf("spanly %.*s\n", static_cast<int>(kVersion.size()), kVersion.data());
-            std::exit(0);
+            (void)std::printf("spanly %.*s\n", static_cast<int>(kVersion.size()), kVersion.data());
+            exitCode = 0;
+            return std::nullopt;
         } else if (a == "-h" || a == "--help") {
-            std::fputs(kUsage, stdout);
-            std::exit(0);
+            (void)std::fputs(kUsage, stdout);
+            exitCode = 0;
+            return std::nullopt;
         } else if (a.starts_with("-psn_")) { // macOS may pass a process serial number
             continue;
         } else {
             log("unknown option {}", a);
-            std::exit(2);
+            exitCode = 2;
+            return std::nullopt;
         }
     }
     return o;

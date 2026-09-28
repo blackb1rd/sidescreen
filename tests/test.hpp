@@ -31,7 +31,7 @@ std::string hex(const unsigned char* data, size_t n);
 #define CHECK(cond)                                                                                                    \
     do {                                                                                                               \
         if (!(cond)) {                                                                                                 \
-            std::fprintf(stderr, "  %s:%d: CHECK(%s) failed\n", __FILE__, __LINE__, #cond);                            \
+            (void)std::fprintf(stderr, "  %s:%d: CHECK(%s) failed\n", __FILE__, __LINE__, #cond);                      \
             ++spanly::test::failures;                                                                                  \
         }                                                                                                              \
     } while (0)

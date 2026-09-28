@@ -48,7 +48,8 @@ AudioObjectID deviceForUid(const std::string& uid) {
     UInt32 size = sizeof device;
     AudioObjectPropertyAddress a{kAudioHardwarePropertyTranslateUIDToDevice, kAudioObjectPropertyScopeGlobal,
                                  kAudioObjectPropertyElementMain};
-    AudioObjectGetPropertyData(kAudioObjectSystemObject, &a, sizeof cf, &cf, &size, &device);
+    AudioObjectGetPropertyData(kAudioObjectSystemObject, &a, sizeof(CFStringRef), static_cast<const void*>(&cf), &size,
+                               &device);
     CFRelease(cf);
     return device;
 }
@@ -95,7 +96,8 @@ public:
         if (AudioQueueNewOutput(&f, callback, this, nullptr, nullptr, 0, &queue_) != noErr) return false;
         if (!uid.empty()) {
             CFStringRef cf = CFStringCreateWithCString(nullptr, uid.c_str(), kCFStringEncodingUTF8);
-            OSStatus s = AudioQueueSetProperty(queue_, kAudioQueueProperty_CurrentDevice, &cf, sizeof cf);
+            OSStatus s = AudioQueueSetProperty(queue_, kAudioQueueProperty_CurrentDevice, static_cast<const void*>(&cf),
+                                               sizeof(CFStringRef));
             CFRelease(cf);
             if (s != noErr) return false;
         }
@@ -167,7 +169,7 @@ void installMicrophone() {
     Obj bundle = send(cls("NSBundle"), "mainBundle");
     std::string driver = toString(send(bundle, "resourcePath")) + "/SpanlyMicrophone.driver";
     const std::string dir = "/Library/Audio/Plug-Ins/HAL";
-    auto quote = [](std::string s) {
+    auto quote = [](const std::string& s) {
         std::string q = "'";
         for (char c : s)
             q += c == '\'' ? std::string("'\\''") : std::string(1, c);

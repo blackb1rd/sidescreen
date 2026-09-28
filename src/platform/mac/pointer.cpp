@@ -197,7 +197,7 @@ private:
     bool down_ = false;
     int clicks_ = 0;
     int borrowed_ = 0;
-    Clock::time_point lastDown_{}, lastTouch_{};
+    Clock::time_point lastDown_, lastTouch_;
     CGPoint lastDownPoint_{};
     std::optional<CGPoint> saved_;
     struct {

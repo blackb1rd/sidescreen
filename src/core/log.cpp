@@ -14,8 +14,12 @@ bool gStderr = true;
 
 void setLogFile(const std::string& path) {
     std::scoped_lock l(gLock);
-    if (gFile) std::fclose(gFile);
+    if (gFile) (void)std::fclose(gFile);
+#ifdef _WIN32
+    if (fopen_s(&gFile, path.c_str(), "a") != 0) gFile = nullptr;
+#else
     gFile = std::fopen(path.c_str(), "a");
+#endif
 }
 
 void setLogToStderr(bool on) {
@@ -32,12 +36,12 @@ void logLine(const std::string& message) {
     localtime_r(&now, &t);
 #endif
     char stamp[16];
-    std::strftime(stamp, sizeof stamp, "%H:%M:%S", &t);
+    (void)std::strftime(stamp, sizeof stamp, "%H:%M:%S", &t);
     std::scoped_lock l(gLock);
-    if (gStderr) std::fprintf(stderr, "[%s] %s\n", stamp, message.c_str());
+    if (gStderr) (void)std::fprintf(stderr, "[%s] %s\n", stamp, message.c_str());
     if (gFile) {
-        std::fprintf(gFile, "[%s] %s\n", stamp, message.c_str());
-        std::fflush(gFile);
+        (void)std::fprintf(gFile, "[%s] %s\n", stamp, message.c_str());
+        (void)std::fflush(gFile);
     }
 }
 

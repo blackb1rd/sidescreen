@@ -22,8 +22,9 @@ struct Options {
     bool usb = true;
     bool udp = true; // Wi-Fi video over UDP when the tablet can take it
 
-    /// Exits on --help, --version or an unknown option.
-    static Options parse(int argc, char** argv);
+    /// Nothing when the app should exit right away (--help, --version, an unknown option), with
+    /// the exit code in `exitCode`.
+    static std::optional<Options> parse(int argc, char** argv, int& exitCode);
 };
 
 } // namespace spanly

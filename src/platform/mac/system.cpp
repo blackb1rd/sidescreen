@@ -1,4 +1,5 @@
 // The macOS run loop, main-thread scheduling, permissions and settings.
+#include "core/env.hpp"
 #include "platform/mac/objc.hpp"
 #include "platform/platform.hpp"
 
@@ -91,8 +92,7 @@ std::string computerName() {
 }
 
 std::string logFilePath() {
-    const char* home = std::getenv("HOME");
-    return std::string(home ? home : "/tmp") + "/Library/Logs/Spanly.log";
+    return env("HOME").value_or("/tmp") + "/Library/Logs/Spanly.log";
 }
 
 // MARK: Settings

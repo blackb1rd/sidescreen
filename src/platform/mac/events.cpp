@@ -11,6 +11,7 @@ using namespace mac;
 
 namespace {
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the block keeps a copy (a reference would dangle)
 void observe(Obj center, const char* name, std::function<void()> fn) {
     Obj queue = send(cls("NSOperationQueue"), "mainQueue");
     void (^block)(Obj) = ^(Obj) {

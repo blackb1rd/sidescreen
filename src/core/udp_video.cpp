@@ -21,14 +21,25 @@ UdpEndpoint::UdpEndpoint() : socket_(net::bindUdp(kUdpVideoPort)) {
     thread_.detach(); // lives as long as the app
 }
 
+std::optional<UdpEndpoint::Token> UdpEndpoint::token(ByteView bytes) {
+    if (bytes.size() != kUdpTokenSize) return std::nullopt;
+    Token t{};
+    std::ranges::copy(bytes, t.begin());
+    return t;
+}
+
 void UdpEndpoint::expect(const Bytes& token, std::function<void(const net::Address&)> attached) {
+    auto t = UdpEndpoint::token(token);
+    if (!t) return;
     std::scoped_lock l(m_);
-    expected_[token] = std::move(attached);
+    expected_[*t] = std::move(attached);
 }
 
 void UdpEndpoint::forget(const Bytes& token) {
+    auto t = UdpEndpoint::token(token);
+    if (!t) return;
     std::scoped_lock l(m_);
-    expected_.erase(token);
+    expected_.erase(*t);
 }
 
 /// Registrations only: "SPU1" + token. Tablets repeat them until UDP_READY, then as keepalives.
@@ -37,12 +48,13 @@ void UdpEndpoint::receiveLoop() {
     while (true) {
         net::Address from;
         long n = net::receiveFrom(socket_, buf, sizeof buf, from, 1000);
-        if (n != 20 || std::memcmp(buf, "SPU1", 4) != 0) continue;
-        Bytes token(buf + 4, buf + 20);
+        if (n != 4 + long(kUdpTokenSize) || std::memcmp(buf, "SPU1", 4) != 0) continue;
+        auto t = token(ByteView(buf + 4, kUdpTokenSize));
+        if (!t) continue;
         std::function<void(const net::Address&)> attached;
         {
             std::scoped_lock l(m_);
-            auto it = expected_.find(token);
+            auto it = expected_.find(*t);
             if (it == expected_.end()) continue;
             attached = it->second;
         }

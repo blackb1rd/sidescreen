@@ -1,5 +1,6 @@
 #include "app/adb.hpp"
 
+#include "core/env.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 
@@ -22,7 +23,7 @@ std::string trim(std::string s) {
 
 std::unique_ptr<Adb> Adb::find(uint16_t port) {
     std::vector<std::string> candidates;
-    if (const char* env = std::getenv("ADB")) candidates.emplace_back(env);
+    if (auto adb = env("ADB")) candidates.push_back(*adb);
     std::string home = platform::homeDirectory();
 #ifdef _WIN32
     candidates.push_back(home + "\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe");

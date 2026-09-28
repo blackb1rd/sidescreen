@@ -21,7 +21,7 @@ public:
         send<void>(menu_.get(), "setAutoenablesItems:", NO);
         send<void>(menu_.get(), "setDelegate:", target_.get());
         send<void>(item_.get(), "setMenu:", menu_.get());
-        setState(TrayState::Idle);
+        MacTray::setState(TrayState::Idle); // no subclass exists yet while constructing
     }
 
     ~MacTray() override { send<void>(send(cls("NSStatusBar"), "systemStatusBar"), "removeStatusItem:", item_.get()); }

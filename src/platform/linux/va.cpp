@@ -1,5 +1,7 @@
 #include "platform/linux/va.hpp"
 
+#include "core/env.hpp"
+
 #include <cstdlib>
 #include <mutex>
 
@@ -18,7 +20,7 @@ bool has(const char* element) {
 
 bool available() {
     gst_init(nullptr, nullptr);
-    return !std::getenv("SPANLY_NO_VA") && has("vapostproc") && encoderName() != nullptr;
+    return !env("SPANLY_NO_VA") && has("vapostproc") && encoderName() != nullptr;
 }
 
 const char* encoderName() {

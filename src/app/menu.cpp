@@ -17,6 +17,7 @@ std::vector<MenuItem> choices(const std::vector<std::pair<std::string, std::stri
     std::vector<MenuItem> items;
     items.reserve(options.size());
     for (const auto& [value, title] : options) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): std::function owns it (analyzer false positive)
         items.push_back(MenuItem::item(title, [choose, value] { choose(value); }, value == current));
     }
     return items;

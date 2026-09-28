@@ -1,5 +1,6 @@
 // Linux: the GLib main loop, paths, autostart, power, and no tray yet (settings live in
 // ~/.config/spanly/settings and the command line).
+#include "core/env.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 
@@ -29,8 +30,7 @@ gboolean runFunction(gpointer p) {
 }
 
 std::string xdg(const char* var, const char* fallback) {
-    const char* v = std::getenv(var);
-    return v && *v ? v : homeDirectory() + fallback;
+    return env(var).value_or(homeDirectory() + fallback);
 }
 
 } // namespace

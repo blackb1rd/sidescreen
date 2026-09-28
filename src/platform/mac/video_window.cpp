@@ -9,7 +9,8 @@
 #include <dispatch/dispatch.h>
 
 #include <algorithm>
-#include <map>
+#include <iterator>
+#include <utility>
 
 namespace spanly::platform {
 
@@ -20,7 +21,7 @@ namespace {
 class MacVideoWindow;
 
 // Mac key codes that map to Android key codes.
-const std::map<unsigned short, uint16_t> kKeys = {
+constexpr std::pair<unsigned short, uint16_t> kKeys[] = {
     {36, 66},   {76, 66},                        // return, enter -> KEYCODE_ENTER
     {51, 67},                                    // delete -> KEYCODE_DEL
     {117, 112},                                  // forward delete
@@ -93,14 +94,14 @@ public:
     }
 
     void config(const Bytes& annexB) override {
-        Bytes copy = annexB;
+        Bytes copy = annexB; // NOLINT(performance-unnecessary-copy-initialization): the block needs its own
         dispatch_async(queue_, ^{
           updateFormat(nalUnits(copy));
         });
     }
 
     void frame(const Bytes& annexB) override {
-        Bytes copy = annexB;
+        Bytes copy = annexB; // NOLINT(performance-unnecessary-copy-initialization): the block needs its own
         dispatch_async(queue_, ^{
           decode(copy);
         });
@@ -160,7 +161,7 @@ private:
 
     /// Position within the letterboxed video as fractions of the tablet's screen.
     std::pair<float, float> position(Obj event) const {
-        CGPoint p =
+        auto p =
             send<CGPoint>(view_.get(), "convertPoint:fromView:", send<CGPoint>(event, "locationInWindow"), nullptr);
         CGRect r = videoRect();
         if (r.size.width <= 0 || r.size.height <= 0) return {0, 0};
@@ -170,7 +171,7 @@ private:
     }
 
     CGRect videoRect() const {
-        CGRect b = send<CGRect>(view_.get(), "bounds");
+        auto b = send<CGRect>(view_.get(), "bounds");
         if (videoW_ <= 0 || videoH_ <= 0) return b;
         double scale = std::min(b.size.width / videoW_, b.size.height / videoH_);
         double w = videoW_ * scale, h = videoH_ * scale;
@@ -196,7 +197,8 @@ private:
         if (send<unsigned long>(event, "modifierFlags") & (1UL << 20)) return false; // Command: Mac shortcuts stay here
         auto code = send<unsigned short>(event, "keyCode");
         if (code == 53) return action(1), true; // esc -> Back
-        if (auto it = kKeys.find(code); it != kKeys.end()) {
+        if (const auto* it = std::ranges::find(kKeys, code, &std::pair<unsigned short, uint16_t>::first);
+            it != std::end(kKeys)) {
             input_.key({1, uint8_t(it->second >> 8U), uint8_t(it->second & 0xFFU)});
             return true;
         }

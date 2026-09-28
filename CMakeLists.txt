@@ -28,6 +28,10 @@ if(SPANLY_SCCACHE AND SPANLY_SCCACHE_PROGRAM AND NOT CMAKE_GENERATOR MATCHES "Vi
 endif()
 include(cmake/Dependencies.cmake)
 
+# Warnings fail the build for Spanly's own targets (created from here on; not the dependencies).
+option(SPANLY_WERROR "Treat compiler warnings as errors" ON)
+set(CMAKE_COMPILE_WARNING_AS_ERROR ${SPANLY_WERROR})
+
 add_library(spanly_core STATIC
   src/core/log.cpp
   src/core/protocol.cpp
@@ -57,7 +61,8 @@ target_link_libraries(spanly_core PUBLIC Threads::Threads)
 if(MSVC)
   target_compile_options(spanly_core PUBLIC /W4 /permissive- /utf-8)
 else()
-  target_compile_options(spanly_core PUBLIC -Wall -Wextra -Wpedantic -Wno-gnu-zero-variadic-macro-arguments)
+  target_compile_options(spanly_core PUBLIC -Wall -Wextra -Wpedantic
+                                            $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-gnu-zero-variadic-macro-arguments>)
 endif()
 include(cmake/Checks.cmake) # sanitizers and fuzzing
 

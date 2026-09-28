@@ -17,16 +17,16 @@ DisplayId mainDisplay() {
     return CGMainDisplayID();
 }
 
-std::optional<std::pair<int, int>> displayPixels(DisplayId display) {
-    CGDisplayModeRef mode = CGDisplayCopyDisplayMode(display);
+std::optional<std::pair<int, int>> displayPixels(DisplayId id) {
+    CGDisplayModeRef mode = CGDisplayCopyDisplayMode(id);
     if (!mode) return std::nullopt;
     std::pair<int, int> px{int(CGDisplayModeGetPixelWidth(mode)), int(CGDisplayModeGetPixelHeight(mode))};
     CGDisplayModeRelease(mode);
     return px;
 }
 
-Rect displayBounds(DisplayId display) {
-    CGRect b = CGDisplayBounds(display);
+Rect displayBounds(DisplayId id) {
+    CGRect b = CGDisplayBounds(id);
     return {b.origin.x, b.origin.y, b.size.width, b.size.height};
 }
 
@@ -87,7 +87,7 @@ public:
     }
 
     void selectMode() override {
-        size_t w = size_t(w_ / 2), h = size_t(h_ / 2);                     // points
+        auto w = size_t(w_ / 2), h = size_t(h_ / 2);                       // points
         size_t pw = hiDPI_ ? size_t(w_) : w, ph = hiDPI_ ? size_t(h_) : h; // pixels
         const void* keys[] = {kCGDisplayShowDuplicateLowResolutionModes};
         const void* values[] = {kCFBooleanTrue};

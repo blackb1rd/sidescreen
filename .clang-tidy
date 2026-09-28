@@ -1,6 +1,9 @@
 # Static analysis for src/ and tests/ (checked in CI). Every warning is an error.
 Checks: >
   -*,
+  clang-analyzer-*,
+  concurrency-*,
+  cert-*,
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
@@ -27,6 +30,9 @@ Checks: >
   readability-make-member-function-const,
   readability-static-accessed-through-instance
 CheckOptions:
+  # Running out of memory (or asking for absurd sizes) ends the app anyway; every copy of a
+  # string or vector could otherwise "escape" from a lambda.
+  bugprone-exception-escape.IgnoredExceptions: 'bad_alloc,bad_array_new_length,length_error'
   bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: true
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*/src/.*'

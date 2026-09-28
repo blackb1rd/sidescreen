@@ -122,7 +122,7 @@ public:
         return *this;
     }
     Class build() {
-        objc_registerClassPair(cls_);
+        if (cls_) objc_registerClassPair(cls_);
         return cls_;
     }
 
@@ -133,7 +133,9 @@ private:
 /// The C++ object behind an instance of a ClassBuilder class.
 template <class T>
 T* owner(Obj self) {
+    if (!self) return nullptr;
     Ivar ivar = class_getInstanceVariable(object_getClass(self), "cpp");
+    if (!ivar) return nullptr; // not a ClassBuilder class
     return *reinterpret_cast<T**>(reinterpret_cast<char*>(self) + ivar_getOffset(ivar));
 }
 
@@ -143,6 +145,7 @@ template <class T>
 Obj instance(Class cls, T* cppObject, bool init = true) {
     auto o = reinterpret_cast<Obj>(class_createInstance(cls, 0));
     Ivar ivar = class_getInstanceVariable(cls, "cpp");
+    if (!o || !ivar) return nullptr;
     *reinterpret_cast<T**>(reinterpret_cast<char*>(o) + ivar_getOffset(ivar)) = cppObject;
     return init ? send(o, "init") : o;
 }

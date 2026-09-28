@@ -1,4 +1,5 @@
 // Running helper programs (adb) on macOS and Linux.
+#include "core/env.hpp"
 #include "platform/platform.hpp"
 
 #include <array>
@@ -48,8 +49,7 @@ bool isExecutable(const std::string& path) {
 }
 
 std::string homeDirectory() {
-    const char* home = std::getenv("HOME");
-    return home ? home : "/";
+    return env("HOME").value_or("/");
 }
 
 } // namespace spanly::platform

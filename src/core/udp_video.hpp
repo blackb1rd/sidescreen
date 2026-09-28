@@ -10,16 +10,19 @@
 #include "core/crypto.hpp"
 #include "core/net.hpp"
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <thread>
 
 namespace spanly {
 
 constexpr uint16_t kUdpVideoPort = 27185;
 constexpr size_t kUdpChunk = 1150; // keeps datagrams under ~1200 bytes: no IP fragmentation
+constexpr size_t kUdpTokenSize = 16;
 
 /// The host end: one socket for every tablet.
 class UdpEndpoint {
@@ -40,7 +43,9 @@ private:
     net::Socket socket_;
     std::atomic<bool> enabled_{true};
     std::mutex m_;
-    std::map<Bytes, std::function<void(const net::Address&)>> expected_;
+    using Token = std::array<uint8_t, kUdpTokenSize>;
+    static std::optional<Token> token(ByteView bytes);
+    std::map<Token, std::function<void(const net::Address&)>> expected_;
     std::thread thread_;
 };
 

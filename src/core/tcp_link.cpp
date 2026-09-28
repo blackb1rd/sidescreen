@@ -60,7 +60,7 @@ void TcpLink::send(Msg type, ByteView payload) {
 void TcpLink::offerUdp() {
     auto& endpoint = UdpEndpoint::shared();
     if (!endpoint.available()) return;
-    udpToken_ = crypto::random(16);
+    udpToken_ = crypto::random(kUdpTokenSize);
     packetizer_ = std::make_unique<UdpPacketizer>(udpKey_);
     std::weak_ptr<TcpLink> weak = std::static_pointer_cast<TcpLink>(shared_from_this());
     endpoint.expect(udpToken_, [weak](const net::Address& from) {
@@ -175,7 +175,7 @@ void TcpLink::readLoop() {
             if (!handshake(raw, *secret_)) return close("not paired");
             keysReady = true;
         }
-        if (!opener_->open(raw, reader)) {
+        if (!opener_ || !opener_->open(raw, reader)) {
             logUnpaired(peer_);
             return close("failed authentication");
         }

@@ -161,6 +161,7 @@ void Controller::wire(const std::shared_ptr<Link>& l) {
         auto l = weak.lock();
         auto s = l ? l->session() : nullptr;
         if (!s) return;
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): std::function owns it (analyzer false positive)
         platform::runOnMain([this, s, event = std::move(event)] {
             if (!platform::accessibilityAllowed()) return;
             pointer_->display = s->displayId();

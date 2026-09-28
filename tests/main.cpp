@@ -25,8 +25,8 @@ int main() {
     for (const auto& c : cases()) {
         int before = failures;
         c.body();
-        std::fprintf(stderr, "%s %s\n", failures == before ? "ok  " : "FAIL", c.name);
+        (void)std::fprintf(stderr, "%s %s\n", failures == before ? "ok  " : "FAIL", c.name);
     }
-    std::fprintf(stderr, "%zu tests, %d failed checks\n", cases().size(), failures);
+    (void)std::fprintf(stderr, "%zu tests, %d failed checks\n", cases().size(), failures);
     return failures == 0 ? 0 : 1;
 }

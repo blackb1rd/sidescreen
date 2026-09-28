@@ -97,7 +97,8 @@ std::optional<uint32_t> nextAck(const net::Socket& tablet, RecordOpener* opener)
 }
 
 Bytes secret(uint8_t fill) {
-    return Bytes(32, fill);
+    Bytes key(32, fill); // not {32, fill}: that would be two bytes
+    return key;
 }
 
 /// The tablet's side of the Wi-Fi handshake: its keys, or none if the host hung up.
@@ -109,7 +110,7 @@ std::optional<crypto::Keys> handshake(const net::Socket& tablet, const Bytes& ke
     Bytes serverNonce(crypto::kNonceSize);
     if (!receiveExactly(tablet, serverNonce.data(), serverNonce.size())) return std::nullopt;
     crypto::Keys host = crypto::serverKeys(key, clientNonce, serverNonce);
-    return crypto::Keys{host.receive, host.send}; // the tablet's send key is the host's receive key
+    return {{host.receive, host.send}}; // the tablet's send key is the host's receive key
 }
 
 } // namespace
