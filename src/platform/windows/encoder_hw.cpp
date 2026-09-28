@@ -13,6 +13,7 @@
 #include <dxgi.h>
 #include <mfapi.h>
 #include <mferror.h>
+#include <mfidl.h> // IMFShutdown
 #include <mftransform.h>
 
 #include <algorithm>
