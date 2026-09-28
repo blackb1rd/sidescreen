@@ -1,0 +1,40 @@
+{
+  "version": 12,
+  "include": ["common.json"],
+  "configurePresets": [
+    { "name": "linux", "hidden": true,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
+    { "name": "linux-release", "displayName": "Linux release", "inherits": ["linux", "ninja-release"] },
+    { "name": "linux-debug", "displayName": "Linux debug", "inherits": ["linux", "ninja-debug"] },
+    { "name": "linux-asan", "displayName": "Linux debug with AddressSanitizer and UBSan",
+      "inherits": ["linux", "ninja-debug", "clang", "sanitize"] },
+    { "name": "linux-tidy", "displayName": "Linux debug with clang, for clang-tidy",
+      "inherits": ["linux", "ninja-debug", "clang"] }
+  ],
+  "buildPresets": [
+    { "name": "linux-only-build", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
+    { "name": "linux-release", "inherits": "linux-only-build", "configurePreset": "linux-release" },
+    { "name": "linux-debug", "inherits": "linux-only-build", "configurePreset": "linux-debug" },
+    { "name": "linux-asan", "inherits": "linux-only-build", "configurePreset": "linux-asan" },
+    { "name": "linux-tidy", "inherits": "linux-only-build", "configurePreset": "linux-tidy" }
+  ],
+  "testPresets": [
+    { "name": "linux-only-test", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
+    { "name": "linux-release", "inherits": "linux-only-test", "configurePreset": "linux-release", "output": { "outputOnFailure": true } },
+    { "name": "linux-debug", "inherits": "linux-only-test", "configurePreset": "linux-debug", "output": { "outputOnFailure": true } },
+    { "name": "linux-asan", "inherits": "linux-only-test", "configurePreset": "linux-asan", "output": { "outputOnFailure": true } }
+  ],
+  "packagePresets": [
+    { "name": "linux-only-package", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
+    { "name": "linux-release", "inherits": "linux-only-package", "configurePreset": "linux-release", "generators": ["TGZ"],
+      "packageDirectory": "${sourceDir}/dist" }
+  ],
+  "workflowPresets": [
+    { "name": "linux-release", "displayName": "Linux: configure, build, test and package", "steps": [
+      { "type": "configure", "name": "linux-release" }, { "type": "build", "name": "linux-release" },
+      { "type": "test", "name": "linux-release" }, { "type": "package", "name": "linux-release" } ] },
+    { "name": "linux-asan", "displayName": "Linux: tests under AddressSanitizer and UBSan", "steps": [
+      { "type": "configure", "name": "linux-asan" }, { "type": "build", "name": "linux-asan" },
+      { "type": "test", "name": "linux-asan" } ] }
+  ]
+}

@@ -20,7 +20,9 @@ jobs:
       NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
     steps:
       - uses: actions/checkout@v5
-      - run: brew install ninja
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
 
       - name: Import Developer ID certificate
         if: env.MACOS_CERTIFICATE_P12 != ''
@@ -63,41 +65,28 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            preset: linux-release
             archive: spanly-linux-x86_64.tar.gz
           - os: windows-latest
+            preset: windows-release
             archive: spanly-windows-x86_64.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
       - name: Install GStreamer and GLib
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
-      - name: Build (Linux)
-        if: runner.os == 'Linux'
-        run: cmake --preset release && cmake --build --preset release --target spanly --parallel
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: cmake --preset windows && cmake --build --preset windows --target spanly --parallel
-      - name: Package (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          mkdir -p dist/spanly
-          strip build/release/spanly
-          cp build/release/spanly README.md LICENSE packaging/linux/70-spanly.rules dist/spanly/
-          tar -C dist -czf ${{ matrix.archive }} spanly
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force dist/spanly | Out-Null
-          Copy-Item build/windows/Release/spanly.exe, README.md, LICENSE dist/spanly/
-          Compress-Archive -Path dist/spanly -DestinationPath ${{ matrix.archive }}
+          sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+      - name: Build, test and package (CPack)
+        run: cmake --workflow ${{ matrix.preset }}
       - uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.archive }}
-          path: ${{ matrix.archive }}
+          path: dist/${{ matrix.archive }}
 
   publish:
     needs: [mac, desktop]

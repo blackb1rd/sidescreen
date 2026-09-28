@@ -104,12 +104,19 @@ mouse, scroll, keys ◀── touch / pen / zoom ───┘          └─ ge
 
 ## Build
 
-C++23 with CMake; mbedTLS and libusb are fetched and linked statically.
+C++23 with CMake 4.4 or later (presets format 12); mbedTLS and libusb are fetched and linked
+statically. The presets for each OS are in `cmake/presets/`; `cmake --list-presets` shows the
+ones for your computer.
 
 ```sh
-cmake --preset release && cmake --build --preset release && ctest --preset release
-# other presets: debug, asan (AddressSanitizer + UBSan), tidy (clang, for clang-tidy),
-# mac-universal (Apple silicon + Intel), windows (Visual Studio 2022)
+cmake --workflow linux-release        # configure, build, test (CTest), package (CPack) -> dist/
+cmake --workflow windows-release      # same on Windows (Visual Studio 2022) -> dist/*.zip
+cmake --workflow macos-release        # configure, build, test on the Mac
+
+# or step by step, e.g. a debug build:
+cmake --preset linux-debug && cmake --build --preset linux-debug && ctest --preset linux-debug
+# more: <os>-asan (AddressSanitizer + UBSan), linux-tidy (clang, for clang-tidy),
+# macos-universal (Apple silicon + Intel), windows-debug
 scripts/build-mac.sh                  # universal Spanly.app -> dist/ (signed; see the script)
 python3 scripts/make-icons.py         # regenerate the icon from assets/icon-source.jpeg
 ```

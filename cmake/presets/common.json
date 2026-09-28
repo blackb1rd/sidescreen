@@ -1,0 +1,18 @@
+{
+  "version": 12,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON" }
+    },
+    { "name": "ninja-release", "hidden": true, "inherits": "base", "generator": "Ninja",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "ninja-debug", "hidden": true, "inherits": "base", "generator": "Ninja",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "clang", "hidden": true,
+      "cacheVariables": { "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" } },
+    { "name": "sanitize", "hidden": true, "cacheVariables": { "SPANLY_SANITIZE": "ON" } }
+  ]
+}

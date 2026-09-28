@@ -139,3 +139,5 @@ enable_testing()
 add_executable(spanly_tests tests/main.cpp tests/protocol_test.cpp tests/crypto_test.cpp tests/flow_test.cpp)
 target_link_libraries(spanly_tests PRIVATE spanly_core)
 add_test(NAME spanly_tests COMMAND spanly_tests)
+
+include(cmake/Packaging.cmake)

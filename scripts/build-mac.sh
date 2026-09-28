@@ -12,12 +12,12 @@ set -euo pipefail
 VERSION=${SPANLY_VERSION:-0.1.0}
 MIN_MACOS=14.0
 ROOT="${0:A:h:h}"
-BUILD="$ROOT/build/mac-universal"
+BUILD="$ROOT/build/macos-universal"
 DIST="$ROOT/dist"
 APP="$DIST/Spanly.app"
 
 echo "==> Building Spanly (universal)"
-(cd "$ROOT" && cmake --preset mac-universal >/dev/null && cmake --build --preset mac-universal)
+(cd "$ROOT" && cmake --preset macos-universal >/dev/null && cmake --build --preset macos-universal)
 
 echo "==> Assembling $APP"
 rm -rf "$APP"

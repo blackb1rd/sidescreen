@@ -1,0 +1,31 @@
+{
+  "version": 12,
+  "include": ["common.json"],
+  "configurePresets": [
+    { "name": "windows", "displayName": "Windows (Visual Studio 2022, x64)", "inherits": "base",
+      "generator": "Visual Studio 17 2022", "architecture": "x64",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } }
+  ],
+  "buildPresets": [
+    { "name": "windows-only-build", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+    { "name": "windows-release", "inherits": "windows-only-build", "configurePreset": "windows", "configuration": "Release" },
+    { "name": "windows-debug", "inherits": "windows-only-build", "configurePreset": "windows", "configuration": "Debug" }
+  ],
+  "testPresets": [
+    { "name": "windows-only-test", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+    { "name": "windows-release", "inherits": "windows-only-test", "configurePreset": "windows", "configuration": "Release",
+      "output": { "outputOnFailure": true } },
+    { "name": "windows-debug", "inherits": "windows-only-test", "configurePreset": "windows", "configuration": "Debug",
+      "output": { "outputOnFailure": true } }
+  ],
+  "packagePresets": [
+    { "name": "windows-only-package", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+    { "name": "windows-release", "inherits": "windows-only-package", "configurePreset": "windows", "generators": ["ZIP"], "configurations": ["Release"],
+      "packageDirectory": "${sourceDir}/dist" }
+  ],
+  "workflowPresets": [
+    { "name": "windows-release", "displayName": "Windows: configure, build, test and package", "steps": [
+      { "type": "configure", "name": "windows" }, { "type": "build", "name": "windows-release" },
+      { "type": "test", "name": "windows-release" }, { "type": "package", "name": "windows-release" } ] }
+  ]
+}

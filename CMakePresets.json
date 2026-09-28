@@ -1,67 +1,13 @@
 {
-  "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
-  "configurePresets": [
-    {
-      "name": "base",
-      "hidden": true,
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON" }
-    },
-    {
-      "name": "release",
-      "displayName": "Release (Ninja)",
-      "inherits": "base",
-      "generator": "Ninja",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
-      "condition": { "type": "notEquals", "lhs": "${hostSystemName}", "rhs": "Windows" }
-    },
-    {
-      "name": "debug",
-      "displayName": "Debug (Ninja)",
-      "inherits": "release",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
-    },
-    {
-      "name": "asan",
-      "displayName": "Debug with AddressSanitizer and UBSan (clang)",
-      "inherits": "debug",
-      "cacheVariables": { "SPANLY_SANITIZE": "ON", "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" }
-    },
-    {
-      "name": "tidy",
-      "displayName": "Debug with clang, for clang-tidy (compile_commands.json)",
-      "inherits": "debug",
-      "cacheVariables": { "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" }
-    },
-    {
-      "name": "mac-universal",
-      "displayName": "macOS release, Apple silicon + Intel",
-      "inherits": "release",
-      "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64", "CMAKE_OSX_DEPLOYMENT_TARGET": "14.0" },
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
-    },
-    {
-      "name": "windows",
-      "displayName": "Windows (Visual Studio 2022)",
-      "inherits": "base",
-      "generator": "Visual Studio 17 2022",
-      "architecture": "x64",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
-    }
+  "version": 12,
+  "cmakeMinimumRequired": { "major": 4, "minor": 4, "patch": 0 },
+  "$comment": [
+    "Presets for each OS are in cmake/presets; only the ones for this computer are listed.",
+    "One command configures, builds, tests and packages: cmake --workflow <os>-release"
   ],
-  "buildPresets": [
-    { "name": "release", "configurePreset": "release" },
-    { "name": "debug", "configurePreset": "debug" },
-    { "name": "asan", "configurePreset": "asan" },
-    { "name": "tidy", "configurePreset": "tidy" },
-    { "name": "mac-universal", "configurePreset": "mac-universal", "targets": ["spanly"] },
-    { "name": "windows", "configurePreset": "windows", "configuration": "Release" }
-  ],
-  "testPresets": [
-    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
-    { "name": "debug", "configurePreset": "debug", "output": { "outputOnFailure": true } },
-    { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true } },
-    { "name": "windows", "configurePreset": "windows", "configuration": "Release", "output": { "outputOnFailure": true } }
+  "include": [
+    "cmake/presets/linux.json",
+    "cmake/presets/macos.json",
+    "cmake/presets/windows.json"
   ]
 }
