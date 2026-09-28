@@ -79,11 +79,13 @@ if(WIN32)
     src/platform/windows/capture.cpp
     src/platform/windows/display.cpp
     src/platform/windows/encoder.cpp
+    src/platform/windows/encoder_hw.cpp
+    src/platform/windows/gpu_convert.cpp
     src/platform/windows/pointer.cpp
     src/platform/windows/system.cpp
     src/platform/windows/tray.cpp
   )
-  target_link_libraries(spanly_platform PUBLIC spanly_core d3d11 dxgi mfplat mfuuid ole32 oleaut32 shell32 user32 advapi32)
+  target_link_libraries(spanly_platform PUBLIC spanly_core d3d11 dxgi mf mfplat mfuuid ole32 oleaut32 shell32 user32 advapi32)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

@@ -1,10 +1,11 @@
-// H.264 on Windows with Media Foundation's encoder (licensed with Windows): low-latency mode,
-// constant bitrate, no B-frames, keyframes on request. Created on the capture thread (the first
-// frame), where it then runs.
+// H.264 on Windows. GPU frames go to the GPU's hardware encoder (encoder_hw.cpp); CPU frames to
+// Media Foundation's software encoder (licensed with Windows): low-latency mode, constant bitrate,
+// no B-frames, keyframes on request. Both are created on the capture thread with the first frame.
 #include <initguid.h> // defines the CODECAPI_* GUIDs used below
 
 #include "core/log.hpp"
 #include "platform/platform.hpp"
+#include "platform/windows/d3d.hpp"
 
 #include <strmif.h> // ICodecAPI
 
@@ -33,9 +34,9 @@ void setCodec(ICodecAPI* codec, const GUID& api, UINT32 value) {
     codec->SetValue(&api, &v);
 }
 
-class MfEncoder : public Encoder {
+class CpuEncoder : public Encoder {
 public:
-    MfEncoder(int w, int h, int fps, int bitrate) : w_(w), h_(h), fps_(fps), bitrate_(bitrate) {}
+    CpuEncoder(int w, int h, int fps, int bitrate) : w_(w), h_(h), fps_(fps), bitrate_(bitrate) {}
 
     Codec codec() const override { return Codec::H264; }
     int width() const override { return w_; }
@@ -51,7 +52,8 @@ public:
             appliedBitrate_ = b;
         }
         if (forceKey_.exchange(false)) setCodec(codec_.Get(), CODECAPI_AVEncVideoForceKeyFrame, 1);
-        const auto& nv12 = *static_cast<const Bytes*>(frame.image.get());
+        const auto& nv12 = static_cast<const win::WinFrame*>(frame.image.get())->nv12;
+        if (nv12.empty()) return;
         ComPtr<IMFMediaBuffer> buffer;
         if (FAILED(MFCreateMemoryBuffer(DWORD(nv12.size()), &buffer))) return;
         BYTE* p = nullptr;
@@ -120,7 +122,7 @@ private:
         MFT_OUTPUT_STREAM_INFO info{};
         transform_->GetOutputStreamInfo(0, &info);
         outSize_ = std::max<DWORD>(info.cbSize, DWORD(w_ * h_));
-        log("H.264 encoder: Media Foundation");
+        log("H.264 encoder: software (Media Foundation)");
         return true;
     }
 
@@ -161,11 +163,46 @@ private:
     DWORD outSize_ = 0;
 };
 
+/// Chooses with the first frame: the hardware encoder for GPU frames, else the software one.
+class WinEncoder : public Encoder {
+public:
+    WinEncoder(int w, int h, int fps, int bitrate) : w_(w), h_(h), fps_(fps), bitrate_(bitrate) {}
+    Codec codec() const override { return Codec::H264; }
+    int width() const override { return w_; }
+    int height() const override { return h_; }
+    void requestKeyframe() override {
+        if (inner_) inner_->requestKeyframe();
+    }
+    void setBitrate(int bps) override {
+        bitrate_ = bps;
+        if (inner_) inner_->setBitrate(bps);
+    }
+    void encode(const Frame& frame) override {
+        if (!inner_) {
+            auto* f = static_cast<win::WinFrame*>(frame.image.get());
+            if (f->texture) {
+                ComPtr<ID3D11Device> device;
+                f->texture->GetDevice(&device);
+                inner_ = win::makeHardwareEncoder(device.Get(), w_, h_, fps_, bitrate_);
+            }
+            if (!inner_) inner_ = std::make_unique<CpuEncoder>(w_, h_, fps_, bitrate_);
+            inner_->onFrame = [this](Bytes au, bool key, std::optional<Bytes> config, Clock::time_point t) {
+                if (onFrame) onFrame(std::move(au), key, std::move(config), t);
+            };
+        }
+        inner_->encode(frame);
+    }
+
+private:
+    int w_, h_, fps_, bitrate_;
+    std::unique_ptr<Encoder> inner_; // capture thread
+};
+
 } // namespace
 
 std::unique_ptr<Encoder> Encoder::create(int width, int height, int fps, int bitrate, Codec codec) {
     if (codec != Codec::H264) return nullptr;
-    return std::make_unique<MfEncoder>(width, height, fps, bitrate);
+    return std::make_unique<WinEncoder>(width, height, fps, bitrate);
 }
 
 } // namespace spanly::platform
