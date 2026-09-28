@@ -24,3 +24,10 @@ if(sanitizers)
   endif()
   target_link_options(spanly_core PUBLIC -fsanitize=${sanitizers})
 endif()
+
+# MSVC's code analysis (/analyze, the windows-analyze preset): its warnings (C6xxx, C26xxx) fail
+# the build like any other. Headers included with <...> (Windows SDK, dependencies) are skipped.
+option(SPANLY_MSVC_ANALYZE "Run MSVC code analysis while compiling" OFF)
+if(MSVC AND SPANLY_MSVC_ANALYZE)
+  target_compile_options(spanly_core PUBLIC /analyze /analyze:external- /external:anglebrackets /external:W0)
+endif()

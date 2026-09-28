@@ -1,0 +1,37 @@
+name: CodeQL
+
+# GitHub's security analysis of the C++ code as built on Linux (core, app, Linux backend, tests).
+# Results appear under Security > Code scanning.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1" # weekly, for newly added queries
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
+      - name: Install GStreamer and GLib
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: c-cpp
+          build-mode: manual
+          queries: security-extended
+      # Without sccache: CodeQL has to see every file compiled.
+      - run: cmake --preset linux-release -DSPANLY_SCCACHE=OFF && cmake --build --preset linux-release --parallel
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:c-cpp

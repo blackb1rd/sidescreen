@@ -72,7 +72,7 @@ jobs:
       - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
         with:
           cmakeVersion: "~4.4.0"
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - run: pip install clang-tidy==22.1.8
@@ -83,6 +83,17 @@ jobs:
           git ls-files 'src/core/*.cpp' 'src/app/*.cpp' 'src/platform/mac/*.cpp' 'src/platform/posix/*.cpp' 'tests/*.cpp' |
             xargs -P 4 -n 4 clang-tidy -p build/macos-release --quiet --extra-arg=-isysroot"$(xcrun --show-sdk-path)" 2>&1 | tee tidy.log
           ! grep -E "(warning|error):" tidy.log
+
+  # Microsoft's code analysis on the Windows code (the other jobs can't see it).
+  analyze-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
+        with:
+          cmakeVersion: "~4.4.0"
+      - run: cmake --preset windows-analyze
+      - run: cmake --build --preset windows-analyze --parallel
 
   # The tests under AddressSanitizer and UBSan.
   sanitize:

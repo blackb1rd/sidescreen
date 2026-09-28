@@ -4,12 +4,15 @@
   "configurePresets": [
     { "name": "windows", "displayName": "Windows (newest Visual Studio, x64)", "inherits": "base",
       "architecture": "x64",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } }
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+    { "name": "windows-analyze", "displayName": "Windows with MSVC code analysis (/analyze)", "inherits": "windows",
+      "cacheVariables": { "SPANLY_MSVC_ANALYZE": "ON" } }
   ],
   "buildPresets": [
     { "name": "windows-only-build", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
     { "name": "windows-release", "inherits": "windows-only-build", "configurePreset": "windows", "configuration": "Release" },
-    { "name": "windows-debug", "inherits": "windows-only-build", "configurePreset": "windows", "configuration": "Debug" }
+    { "name": "windows-debug", "inherits": "windows-only-build", "configurePreset": "windows", "configuration": "Debug" },
+    { "name": "windows-analyze", "inherits": "windows-only-build", "configurePreset": "windows-analyze", "configuration": "Debug" }
   ],
   "testPresets": [
     { "name": "windows-only-test", "hidden": true, "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },

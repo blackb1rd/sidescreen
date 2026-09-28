@@ -127,7 +127,10 @@ python3 scripts/make-icons.py         # regenerate the icon from assets/icon-sou
 Linux needs `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev`. CI builds and
 tests on all three systems, checks `clang-format` and `clang-tidy`, runs the tests under
 AddressSanitizer + UBSan and ThreadSanitizer, and fuzzes everything that reads bytes from another
-device (`fuzz/`) for a few minutes, keeping the corpus between runs.
+device (`fuzz/`) for a few minutes, keeping the corpus between runs. clang-tidy (with the Clang
+static analyzer and the CERT and concurrency checks) covers the Linux and Mac code, MSVC's
+`/analyze` the Windows code (`windows-analyze` preset), and CodeQL scans for security issues.
+Compiler warnings are errors.
 
 The version comes from the git tag (`v1.2.3` → 1.2.3; between tags, e.g. `1.2.3-4-gabc1234`), and
 `spanly --version` prints it. Pushing a tag like `v0.2.0` (or `v0.2.0-beta.1` for a pre-release)
