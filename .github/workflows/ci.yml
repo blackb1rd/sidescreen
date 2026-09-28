@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  # The C++ app (Mac, Windows, Linux): build and test on each OS.
-  cpp:
+  # Build and test on each OS (Mac, Windows, Linux), and the microphone driver on the Mac.
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -26,27 +26,36 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Build the microphone driver (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          clang++ -std=c++23 -bundle -Wall -Wextra -Werror -Wno-unused-parameter -arch arm64 -arch x86_64 \
+            -framework CoreAudio -framework CoreFoundation src/driver/*.cpp -o /tmp/SpanlyMicrophone
 
   # clang-format and clang-tidy (pinned versions, so results match on every machine).
-  cpp-lint:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Install clang-format and clang-tidy
-        run: pip install clang-format==23.1.1 clang-tidy==22.1.8
+      - name: Install tools and libraries
+        run: |
+          pip install clang-format==23.1.1 clang-tidy==22.1.8
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
       - name: clang-format
         run: clang-format --dry-run --Werror $(git ls-files 'src/*.cpp' 'src/*.hpp' 'tests/*.cpp' 'tests/*.hpp')
       - name: Configure (for compile_commands.json)
         run: CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-      - name: Build (generated headers)
+      - name: Build
         run: cmake --build build --parallel
-      - name: clang-tidy
+      - name: clang-tidy (the code built on Linux)
         run: |
-          clang-tidy -p build --quiet $(git ls-files 'src/core/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
+          clang-tidy -p build --quiet $(git ls-files 'src/core/*.cpp' 'src/app/*.cpp' 'src/platform/common/*.cpp' \
+            'src/platform/linux/*.cpp' 'src/platform/posix/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
           ! grep -E "(warning|error):" tidy.log
 
   # The C++ core under AddressSanitizer and UBSan.
-  cpp-sanitize:
+  sanitize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -54,82 +63,12 @@ jobs:
       - run: cmake --build build --parallel
       - run: ctest --test-dir build --output-on-failure
 
-  # The Swift Mac app (until the Rust host covers macOS too).
-  mac-app:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install libusb
-        run: brew install libusb pkg-config
-
-      - name: Build
-        run: swift build -c release --package-path mac
-
-      - name: Test
-        run: swift test --package-path mac
-
-      - name: Build the microphone driver
-        run: |
-          clang++ -std=c++23 -bundle -Wall -Wextra -Werror -Wno-unused-parameter -arch arm64 -arch x86_64 \
-            -framework CoreAudio -framework CoreFoundation src/driver/*.cpp -o /tmp/SpanlyMicrophone
-
-  # The Rust host: Windows and Linux backends, and the shared core.
-  host-linux:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: host
-    steps:
-      - uses: actions/checkout@v5
-      - name: Install libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends pkg-config libusb-1.0-0-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: host
-      - run: cargo fmt --check
-      - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
-      - run: cargo build --release
-
-  host-windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: host
-    steps:
-      - uses: actions/checkout@v5
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: host
-      - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
-      - run: cargo build --release
-
-  host-macos:
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: host
-    steps:
-      - uses: actions/checkout@v5
-      - run: brew install libusb pkg-config
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: host
-      - run: cargo clippy --features test-pattern --all-targets -- -D warnings
-      - run: cargo test --features test-pattern
-
   file-length:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - name: No source file over 500 lines
         run: |
-          long=$(find src tests mac/Sources mac/Tests scripts host/src -type f \
-                   \( -name '*.cpp' -o -name '*.hpp' -o -name '*.swift' -o -name '*.sh' -o -name '*.py' -o -name '*.c' -o -name '*.h' -o -name '*.rs' \) \
+          long=$(find src tests scripts -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.sh' -o -name '*.py' \) \
                  -exec awk 'END { if (NR > 500) print FILENAME ": " NR " lines" }' {} \;)
           if [ -n "$long" ]; then echo "$long"; exit 1; fi

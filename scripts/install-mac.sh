@@ -3,19 +3,15 @@
 # The app registers itself to open at login (toggle in its menu bar menu).
 #
 # Usage: scripts/install-mac.sh             build + install + start
-#        scripts/install-mac.sh --uninstall quit and remove the app
+#        scripts/install-mac.sh --uninstall quit and remove the app (and its microphone driver)
 set -euo pipefail
 
 ROOT="${0:A:h:h}"
 APP="$HOME/Applications/Spanly.app"
-OLD_AGENT="$HOME/Library/LaunchAgents/com.caigenix.spanly.plist"
 
 quit_running() {
-    # Earlier versions ran as a launchd agent; the app now manages its own login item.
-    launchctl bootout "gui/$UID/com.caigenix.spanly" 2>/dev/null || true
-    rm -f "$OLD_AGENT"
     osascript -e 'tell application id "com.caigenix.spanly" to quit' 2>/dev/null || true
-    pkill -x spanly 2>/dev/null || true
+    pkill -f "Spanly.app/Contents/MacOS/spanly" 2>/dev/null || true
     sleep 1
 }
 
@@ -30,10 +26,10 @@ if [[ "${1:-}" == "--uninstall" ]]; then
     exit 0
 fi
 
-"$ROOT/scripts/build-mac-app.sh"
+"$ROOT/scripts/build-mac.sh"
 quit_running
 mkdir -p "${APP:h}"
 rm -rf "$APP"
-cp -R "$ROOT/mac/dist/Spanly.app" "$APP"
+cp -R "$ROOT/dist/Spanly.app" "$APP"
 open "$APP"
 echo "Installed and started $APP — look for its icon in the menu bar."

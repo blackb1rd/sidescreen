@@ -1,10 +1,7 @@
 .DS_Store
 .vscode/
-mac/.build/
-mac/dist/
 *.p12
 *.p8
-/host/target
 /build
 /build-*
 /target

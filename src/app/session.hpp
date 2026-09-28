@@ -61,7 +61,7 @@ private:
     void startPipeline();
     void followLink();
     void startStream();
-    void sendSize();
+    void sendSize() const;
     void send(Bytes au, bool key, std::optional<Bytes> config, Clock::time_point captured);
     void onCapturedFrame(const platform::Frame& f);
     std::optional<std::tuple<platform::DisplayId, int, int>> findDisplay() const;

@@ -89,6 +89,7 @@ public:
 };
 } // namespace
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the interface takes ownership
 std::unique_ptr<Tray> Tray::create(std::function<std::vector<MenuItem>()>) {
     log("settings: {}/settings (or command-line options, see --help)", configDirectory());
     return std::make_unique<NoTray>();
@@ -105,7 +106,9 @@ void openFile(const std::string& path) {
 
 // MARK: System
 
-void watchSystem(SystemEvents) {} // display sleep follows the desktop's own screen blanking
+// Nothing to watch: display sleep follows the desktop's own screen blanking.
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the interface takes ownership
+void watchSystem(SystemEvents) {}
 
 bool onBattery() {
     std::error_code ec;

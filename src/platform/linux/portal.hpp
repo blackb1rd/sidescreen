@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-struct _GDBusConnection;
+#include <gio/gio.h>
 
 namespace spanly::platform::portal {
 
@@ -32,7 +32,7 @@ public:
 
 private:
     PortalSession() = default;
-    _GDBusConnection* bus_ = nullptr;
+    GDBusConnection* bus_ = nullptr;
     std::string session_;
     int fd_ = -1;
     uint32_t node_ = 0;

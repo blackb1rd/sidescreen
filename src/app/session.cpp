@@ -260,7 +260,7 @@ void TabletSession::startStream() {
     capture_->resendLast();
 }
 
-void TabletSession::sendSize() {
+void TabletSession::sendSize() const {
     Bytes p;
     putU32(p, uint32_t(size_.first));
     putU32(p, uint32_t(size_.second));

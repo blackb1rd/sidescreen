@@ -26,7 +26,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BUILD/spanly" "$APP/Contents/MacOS/spanly"
 strip -x "$APP/Contents/MacOS/spanly"
-cp "$ROOT/mac/Resources/AppIcon.icns" "$APP/Contents/Resources/"
+cp "$ROOT/assets/AppIcon.icns" "$APP/Contents/Resources/"
 
 # The "Spanly Microphone" audio driver, installed from the menu when first needed.
 DRIVER="$APP/Contents/Resources/SpanlyMicrophone.driver"

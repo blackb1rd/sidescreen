@@ -5,7 +5,7 @@ The source is a white rounded tile on an off-white background, so the artwork
 (laptop, tablet, arrow) is cut out and placed on clean, correctly proportioned
 tiles for each platform:
 
-  mac/Resources/AppIcon.icns   macOS app icon (824/1024 tile + shadow)
+  assets/AppIcon.icns          macOS app icon (824/1024 tile + shadow)
   assets/mac-icon-1024.png     the same, as a PNG (README, website)
 
 Usage: python3 scripts/make-icons.py   (needs Pillow and macOS iconutil)
@@ -72,7 +72,7 @@ def mac_icon(art):
             px = pt * scale
             name = f"icon_{pt}x{pt}{'@2x' if scale == 2 else ''}.png"
             base.resize((px, px), Image.LANCZOS).save(os.path.join(iconset, name))
-    out = os.path.join(ROOT, "mac", "Resources", "AppIcon.icns")
+    out = os.path.join(ROOT, "assets", "AppIcon.icns")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     subprocess.run(["iconutil", "-c", "icns", iconset, "-o", out], check=True)
     shutil.rmtree(iconset)

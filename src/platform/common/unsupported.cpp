@@ -16,10 +16,11 @@ bool microphoneInstalled() {
 }
 void installMicrophone() {}
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the interface takes ownership
 std::unique_ptr<VideoWindow> VideoWindow::create(const std::string&, Input) {
     return nullptr;
 }
 
-void onOpenUrl(std::function<void(const std::string&)>) {}
+void onOpenUrl(std::function<void(const std::string&)>) {} // NOLINT(performance-unnecessary-value-param)
 
 } // namespace spanly::platform

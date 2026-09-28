@@ -73,7 +73,7 @@ private:
     }
 
     bool down_ = false;
-    Clock::time_point lastTouch_{};
+    Clock::time_point lastTouch_;
 };
 
 } // namespace

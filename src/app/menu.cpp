@@ -14,6 +14,7 @@ namespace {
 std::vector<MenuItem> choices(const std::vector<std::pair<std::string, std::string>>& options,
                               const std::string& current, const std::function<void(const std::string&)>& choose) {
     std::vector<MenuItem> items;
+    items.reserve(options.size());
     for (const auto& [value, title] : options) {
         items.push_back(MenuItem::item(title, [choose, value] { choose(value); }, value == current));
     }
