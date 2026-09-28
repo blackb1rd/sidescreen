@@ -228,9 +228,11 @@ private:
                 .method(
                     "stream:didStopWithError:",
                     +[](Obj self, SEL, Obj, Obj error) {
-                        log("capture stopped: {}", toString(send(error, "localizedDescription")));
                         constexpr long kUserStopped = -3817; // SCStreamErrorUserStopped
-                        bool byUser = error && send<long>(error, "code") == kUserStopped;
+                        long code = error ? send<long>(error, "code") : 0;
+                        bool byUser = code == kUserStopped;
+                        log("capture stopped: {} ({} {})", error ? toString(send(error, "localizedDescription")) : "",
+                            error ? toString(send(error, "domain")) : "", code);
                         auto* a = owner<Anchor>(self);
                         std::scoped_lock l(a->m);
                         if (a->capture && a->capture->onStop) a->capture->onStop(byUser);
