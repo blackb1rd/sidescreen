@@ -4,6 +4,8 @@
 
 #include <windows.h>
 
+#include <objbase.h>
+
 #include <functional>
 #include <string>
 
@@ -16,6 +18,21 @@ void onMessage(UINT message, std::function<void(WPARAM, LPARAM)> handler);
 
 constexpr UINT kRunMessage = WM_APP + 1;
 constexpr UINT kTrayMessage = WM_APP + 2;
+
+/// COM on this thread for as long as it lives (multithreaded apartment). Declare it before any
+/// COM object in the scope, so those are released first.
+class ComScope {
+public:
+    ComScope() : ok_(SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED))) {}
+    ~ComScope() {
+        if (ok_) CoUninitialize();
+    }
+    ComScope(const ComScope&) = delete;
+    ComScope& operator=(const ComScope&) = delete;
+
+private:
+    bool ok_;
+};
 
 std::wstring wide(const std::string& s);
 std::string utf8(const std::wstring& s);

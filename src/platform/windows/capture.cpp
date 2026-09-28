@@ -184,7 +184,7 @@ private:
     }
 
     void loop(const std::wstring& device, int fps, const std::function<void(const std::string&)>& done) {
-        CoInitializeEx(nullptr, COINIT_MULTITHREADED); // the encoder runs on this thread too
+        win::ComScope com; // the encoder runs on this thread too
         Duplicator dup;
         if (!dup.open(device)) {
             running_ = false;
@@ -213,7 +213,6 @@ private:
             }
             if (onFrame) onFrame(f);
         }
-        CoUninitialize();
     }
 
     std::thread thread_;

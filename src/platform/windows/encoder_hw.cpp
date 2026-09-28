@@ -5,6 +5,7 @@
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "platform/windows/d3d.hpp"
+#include "platform/windows/win.hpp"
 
 #include <strmif.h> // ICodecAPI
 
@@ -147,7 +148,7 @@ public:
 
 private:
     void run() {
-        CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        win::ComScope com;
         while (true) {
             ComPtr<IMFMediaEvent> event;
             if (FAILED(events_->GetEvent(0, &event))) break; // shut down
@@ -156,7 +157,6 @@ private:
             if (type == METransformNeedInput && !feed()) break;
             if (type == METransformHaveOutput) drain();
         }
-        CoUninitialize();
     }
 
     bool feed() {
