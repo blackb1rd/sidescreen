@@ -30,6 +30,10 @@ public:
     bool onUsb() const { return link()->kind() == Link::Kind::Usb; }
     bool onWifi() const { return link()->kind() == Link::Kind::Wifi; }
     bool streaming() const;
+    /// The user stopped sharing (from the system): no display or stream until resume().
+    bool paused() const { return paused_; }
+    void pause();
+    void resume();
     std::string name() const;
     /// Serial number of its virtual display: the OS keeps each tablet's arrangement.
     uint32_t serial() const;
@@ -97,6 +101,7 @@ private:
     uint64_t restartGeneration_ = 0;
     uint64_t teardownGeneration_ = 0;
     std::atomic<bool> viewing_{true};
+    std::atomic<bool> paused_{false};
     std::atomic<bool> waitingForKey_{false};
 };
 

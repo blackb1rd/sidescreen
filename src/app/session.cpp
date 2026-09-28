@@ -13,7 +13,12 @@ using platform::Codec;
 TabletSession::TabletSession(std::string id, Controller& controller)
     : id_(std::move(id)), c_(controller), capture_(platform::Capture::create()) {
     capture_->onFrame = [this](const platform::Frame& f) { onCapturedFrame(f); };
-    capture_->onStop = [this] { scheduleRestart(); };
+    capture_->onStop = [this](bool byUser) {
+        if (byUser)
+            pause();
+        else
+            scheduleRestart();
+    };
     capture_->onAudio = [this](const Bytes& pcm) {
         auto l = link();
         if (!l->connected()) return;
@@ -47,7 +52,27 @@ std::shared_ptr<platform::Encoder> TabletSession::encoder() const {
 }
 
 bool TabletSession::streaming() const {
-    return link()->connected() && encoder();
+    return !paused_ && link()->connected() && encoder();
+}
+
+void TabletSession::pause() {
+    std::weak_ptr<TabletSession> weak = weak_from_this();
+    platform::runOnMain([weak] {
+        auto s = weak.lock();
+        if (!s || s->paused_.exchange(true)) return;
+        log("stopped sharing to {}; choose \"Resume Sharing\" in the Spanly menu to share again", s->name());
+        Bytes off{0};
+        s->link()->send(Msg::Display, off); // the tablet may let its screen sleep
+        s->stop([weak] {
+            if (auto s = weak.lock()) s->c_.updateSpeakers();
+        });
+    });
+}
+
+void TabletSession::resume() {
+    if (!paused_.exchange(false)) return;
+    log("sharing to {} again", name());
+    if (lastHello_ && link()->connected()) hello(*lastHello_);
 }
 
 std::string TabletSession::name() const {
@@ -125,6 +150,7 @@ std::shared_ptr<platform::Encoder> TabletSession::makeEncoder(int w, int h, doub
 }
 
 void TabletSession::startPipeline() {
+    if (paused_) return;
     if (!c_.displayOn()) return; // a sleeping display can't be captured; waking restarts us
     auto found = findDisplay();
     if (!found) {
@@ -360,6 +386,7 @@ void TabletSession::placeDisplay(const std::string& position, const std::vector<
 }
 
 void TabletSession::setDisplayAwake(bool on) {
+    if (paused_) return; // the tablet already knows it may sleep
     Bytes p{uint8_t(on ? 1 : 0)};
     link()->send(Msg::Display, p);
     if (on && encoder()) scheduleRestart(0.5);

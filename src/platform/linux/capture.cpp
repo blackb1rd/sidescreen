@@ -64,7 +64,7 @@ public:
                     log("capture stopped: {}", e ? e->message : "?");
                     if (e) g_error_free(e);
                     auto* c = static_cast<GstCapture*>(self);
-                    if (c->onStop) c->onStop();
+                    if (c->onStop) c->onStop(false);
                 }
                 return TRUE;
             },

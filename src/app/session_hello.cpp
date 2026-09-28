@@ -8,6 +8,11 @@ namespace spanly {
 void TabletSession::hello(const Hello& h) {
     lastHello_ = h;
     ++teardownGeneration_;
+    if (paused_) { // reconnecting doesn't undo the user's "stop sharing"
+        Bytes off{0};
+        link()->send(Msg::Display, off);
+        return;
+    }
     bool hevc = (h.caps & 1U) != 0;
     if (hevc != tabletHEVC_) {
         tabletHEVC_ = hevc;

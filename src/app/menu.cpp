@@ -1,9 +1,11 @@
 #include "app/menu.hpp"
 
 #include "app/controller.hpp"
+#include "app/session.hpp"
 #include "platform/platform.hpp"
 #include "spanly_version.hpp"
 
+#include <algorithm>
 #include <format>
 
 namespace spanly {
@@ -82,10 +84,19 @@ std::vector<MenuItem> Menu::build() {
         m.push_back(MenuItem::label("Streaming to " + tablet, true));
         m.push_back(MenuItem::label(detail));
     }
-    if (streams.empty() && !c_.chosenSerial().empty()) {
+    for (const auto& session : c_.sessions()) {
+        if (!session->paused()) continue;
+        std::weak_ptr<TabletSession> weak = session;
+        m.push_back(MenuItem::label("Sharing to " + session->name() + " stopped", true));
+        m.push_back(MenuItem::item("Resume Sharing", [weak] {
+            if (auto s = weak.lock()) s->resume();
+        }));
+    }
+    bool paused = std::ranges::any_of(c_.sessions(), [](const auto& s) { return s->paused(); });
+    if (streams.empty() && !paused && !c_.chosenSerial().empty()) {
         m.push_back(MenuItem::label("Waiting for " + s.deviceName().value_or("the tablet"), true));
         m.push_back(MenuItem::label("Connect it with USB; Spanly opens on it by itself"));
-    } else if (streams.empty()) {
+    } else if (streams.empty() && !paused) {
         m.push_back(MenuItem::label("No tablet chosen", true));
         m.push_back(MenuItem::label("Connect an Android tablet with USB"));
     }

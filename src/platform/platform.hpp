@@ -80,7 +80,9 @@ public:
 
     std::function<void(const Frame&)> onFrame; // capture thread
     std::function<void(const Bytes&)> onAudio; // 48 kHz 16-bit stereo PCM, audio thread
-    std::function<void()> onStop;              // stopped by the system (e.g. the display went away)
+    /// Capture ended by itself: `byUser` when the user stopped it (macOS's screen-sharing menu),
+    /// otherwise the system did (e.g. the display went away).
+    std::function<void(bool byUser)> onStop;
 
     /// Start capturing a display at the given size; `done` gets "" or an error (any thread).
     virtual void start(DisplayId id, int width, int height, int fps, bool audio,
