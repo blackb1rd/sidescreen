@@ -2,6 +2,7 @@
 
 #include "app/controller.hpp"
 #include "platform/platform.hpp"
+#include "spanly_version.hpp"
 
 #include <format>
 
@@ -176,6 +177,7 @@ std::vector<MenuItem> Menu::build() {
     m.push_back(MenuItem::item(
         "Open at Login", [] { platform::setLoginItem(!platform::loginItemEnabled()); }, platform::loginItemEnabled()));
     m.push_back(MenuItem::item("Show Log", [] { platform::openFile(platform::logFilePath()); }));
+    m.push_back(MenuItem::label("Version " + std::string(kVersion)));
     m.push_back(MenuItem::separator());
     MenuItem quit = MenuItem::item("Quit Spanly", [] { platform::quit(); });
     quit.key = "q";

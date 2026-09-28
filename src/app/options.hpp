@@ -22,7 +22,7 @@ struct Options {
     bool usb = true;
     bool udp = true; // Wi-Fi video over UDP when the tablet can take it
 
-    /// Exits on --help or an unknown option.
+    /// Exits on --help, --version or an unknown option.
     static Options parse(int argc, char** argv);
 };
 

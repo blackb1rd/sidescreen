@@ -9,7 +9,6 @@
 #       ad-hoc                    Screen Recording / Accessibility must be re-granted after each build
 set -euo pipefail
 
-VERSION=${SPANLY_VERSION:-0.1.0}
 MIN_MACOS=14.0
 ROOT="${0:A:h:h}"
 BUILD="$ROOT/build/macos-universal"
@@ -18,6 +17,9 @@ APP="$DIST/Spanly.app"
 
 echo "==> Building Spanly (universal)"
 (cd "$ROOT" && cmake --preset macos-universal >/dev/null && cmake --build --preset macos-universal)
+# The version comes from the git tag (cmake/Version.cmake), or $SPANLY_VERSION if set.
+VERSION=$(<"$BUILD/version.txt")
+NUMBER=${VERSION%%-*} # Info.plist wants MAJOR.MINOR.PATCH only
 
 echo "==> Assembling $APP"
 rm -rf "$APP"
@@ -44,8 +46,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key><string>spanly</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>$VERSION</string>
-    <key>CFBundleVersion</key><string>$VERSION</string>
+    <key>CFBundleShortVersionString</key><string>$NUMBER</string>
+    <key>CFBundleVersion</key><string>$NUMBER</string>
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>$MIN_MACOS</string>
     <key>NSHumanReadableCopyright</key><string>Spanly</string>

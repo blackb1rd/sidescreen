@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
-project(spanly VERSION 0.1.0 LANGUAGES C CXX)
+include(cmake/Version.cmake)
+project(spanly VERSION ${SPANLY_VERSION_NUMBER} LANGUAGES C CXX)
 
 # Spanly for Mac, Windows and Linux: one C++ codebase. The shared core (protocol, crypto,
 # links, sessions) is in src/core; each OS has its backend in src/platform/<os>.
@@ -32,7 +33,9 @@ add_library(spanly_core STATIC
   src/core/usb_io.cpp
   src/core/udp_video.cpp
 )
-target_include_directories(spanly_core PUBLIC src)
+target_include_directories(spanly_core PUBLIC src "${PROJECT_BINARY_DIR}/generated")
+configure_file(cmake/version.hpp.in generated/spanly_version.hpp @ONLY)
+file(WRITE "${PROJECT_BINARY_DIR}/version.txt" "${SPANLY_VERSION}\n") # read by scripts/build-mac.sh
 target_link_libraries(spanly_core PUBLIC spanly::mbedcrypto spanly::libusb)
 if(WIN32)
   target_link_libraries(spanly_core PUBLIC ws2_32 iphlpapi bcrypt)
@@ -128,6 +131,8 @@ if(TARGET spanly_platform)
   target_link_libraries(spanly PRIVATE spanly_platform)
   if(WIN32)
     set_target_properties(spanly PROPERTIES WIN32_EXECUTABLE ON) # no console window
+    configure_file(packaging/windows/spanly.rc.in generated/spanly.rc @ONLY)
+    target_sources(spanly PRIVATE "${PROJECT_BINARY_DIR}/generated/spanly.rc")
     if(MSVC)
       target_link_options(spanly PRIVATE /ENTRY:mainCRTStartup)
     endif()

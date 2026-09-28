@@ -125,8 +125,10 @@ Linux needs `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
 tests on all three systems, checks `clang-format` and `clang-tidy`, and runs the tests under
 AddressSanitizer and UBSan.
 
-Pushing a tag like `v0.2.0` attaches `Spanly-mac.zip` and the Windows and Linux builds to a GitHub
-release. With these repository secrets, the Mac app is also signed with a Developer ID and
+The version comes from the git tag (`v1.2.3` → 1.2.3; between tags, e.g. `1.2.3-4-gabc1234`), and
+`spanly --version` prints it. Pushing a tag like `v0.2.0` (or `v0.2.0-beta.1` for a pre-release)
+builds everything with that version and publishes a GitHub release with `Spanly-mac.zip` and the
+Windows and Linux downloads. With these repository secrets, the Mac app is also signed with a Developer ID and
 notarized: `MACOS_CERTIFICATE_P12` (base64 .p12), `MACOS_CERTIFICATE_PASSWORD`,
 `MACOS_SIGN_IDENTITY`, `NOTARY_KEY_P8`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`.
 

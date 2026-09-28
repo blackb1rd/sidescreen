@@ -1,6 +1,7 @@
 #include "app/options.hpp"
 
 #include "core/log.hpp"
+#include "spanly_version.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -13,7 +14,7 @@ namespace {
 constexpr const char* kUsage =
     R"(usage: spanly [--hidpi | --standard] [--codec hevc|h264] [--position right|left|above|below|keep]
               [--display NAME] [--fps N] [--battery-fps N] [--bitrate MBPS] [--max-width PX] [--stats]
-              [--no-usb] [--no-udp] [--no-adb] [--no-restore-cursor]
+              [--no-usb] [--no-udp] [--no-adb] [--no-restore-cursor] [--version]
 Options override the menu settings for this run only.
   --hidpi        always use a Retina virtual display (Automatic: Retina over USB)
   --standard     always use a non-Retina display at half the tablet's resolution
@@ -74,7 +75,10 @@ Options Options::parse(int argc, char** argv) {
             o.usb = false;
         else if (a == "--no-udp")
             o.udp = false;
-        else if (a == "-h" || a == "--help") {
+        else if (a == "--version") {
+            std::printf("spanly %.*s\n", static_cast<int>(kVersion.size()), kVersion.data());
+            std::exit(0);
+        } else if (a == "-h" || a == "--help") {
             std::fputs(kUsage, stdout);
             std::exit(0);
         } else if (a.starts_with("-psn_")) { // macOS may pass a process serial number

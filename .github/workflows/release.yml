@@ -7,6 +7,11 @@ on:
 permissions:
   contents: write
 
+# Push a tag like v1.2.3 (or v1.2.3-beta.1 for a pre-release): every build takes its version from
+# the tag (cmake/Version.cmake), and the last job publishes the GitHub release with the downloads.
+env:
+  SPANLY_VERSION: ${{ github.ref_name }}
+
 jobs:
   mac:
     runs-on: macos-latest
@@ -40,7 +45,6 @@ jobs:
 
       - name: Build Spanly.app
         run: |
-          export SPANLY_VERSION="${GITHUB_REF_NAME#v}"
           export SPANLY_SIGN_IDENTITY="$MACOS_SIGN_IDENTITY"
           scripts/build-mac.sh
 
@@ -98,4 +102,7 @@ jobs:
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" Spanly-mac.zip spanly-* --generate-notes
+        run: |
+          flags=(--title "Spanly ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag)
+          [[ "$GITHUB_REF_NAME" == *-* ]] && flags+=(--prerelease) # e.g. v1.2.0-beta.1
+          gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" "${flags[@]}" Spanly-mac.zip spanly-*
