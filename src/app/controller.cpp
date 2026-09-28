@@ -1,6 +1,7 @@
 #include "app/controller.hpp"
 
 #include "core/log.hpp"
+#include "spanly_version.hpp"
 
 #include <algorithm>
 #include <format>
@@ -23,6 +24,7 @@ Controller::Controller(Options opts) : opts_(std::move(opts)), pointer_(platform
 Controller::~Controller() = default;
 
 void Controller::start() {
+    log("Spanly {} starting", kVersion);
     if (!platform::accessibilityAllowed())
         log("touch input disabled until Spanly has Accessibility permission "
             "(System Settings > Privacy & Security > Accessibility)");

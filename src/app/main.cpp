@@ -3,13 +3,11 @@
 #include "app/menu.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
-#include "spanly_version.hpp"
 
 int main(int argc, char** argv) {
     using namespace spanly;
     Options opts = Options::parse(argc, argv);
     setLogFile(platform::logFilePath());
-    log("Spanly {} starting", kVersion);
     platform::restoreSpeakers(); // in case an earlier run stopped while muting them
     auto controller = std::make_unique<Controller>(std::move(opts));
     std::unique_ptr<Menu> menu;

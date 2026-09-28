@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# sccache keeps compiled objects in the GitHub Actions cache (not used on Windows: see CMakeLists.txt).
+env:
+  SCCACHE_GHA_ENABLED: "true"
+
 jobs:
   # Build and test on each OS (Mac, Windows, Linux), and the microphone driver on the Mac.
   build:
@@ -18,6 +22,8 @@ jobs:
       - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
         with:
           cmakeVersion: "~4.4.0"
+      - uses: mozilla-actions/sccache-action@v0.0.11
+        if: runner.os != 'Windows'
       - name: Install GStreamer and GLib (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -42,6 +48,7 @@ jobs:
       - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
         with:
           cmakeVersion: "~4.4.0"
+      - uses: mozilla-actions/sccache-action@v0.0.11
       - name: Install tools and libraries
         run: |
           pip install clang-format==23.1.1 clang-tidy==22.1.8
@@ -65,6 +72,7 @@ jobs:
       - uses: lukka/get-cmake@latest # CMake 4.4 (presets format 12) and Ninja
         with:
           cmakeVersion: "~4.4.0"
+      - uses: mozilla-actions/sccache-action@v0.0.11
       - run: cmake --workflow linux-asan
 
   file-length:

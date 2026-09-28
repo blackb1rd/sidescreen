@@ -17,6 +17,16 @@ if(APPLE)
 endif()
 
 option(SPANLY_SANITIZE "Build with AddressSanitizer and UBSan" OFF)
+
+# sccache, when installed, caches compiled objects across build folders (and in CI across runs).
+# Visual Studio projects can't use a compiler launcher, so Windows builds without it.
+option(SPANLY_SCCACHE "Compile through sccache if it is installed" ON)
+find_program(SPANLY_SCCACHE_PROGRAM sccache)
+if(SPANLY_SCCACHE AND SPANLY_SCCACHE_PROGRAM AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+  set(CMAKE_C_COMPILER_LAUNCHER "${SPANLY_SCCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${SPANLY_SCCACHE_PROGRAM}")
+  message(STATUS "Compiling through ${SPANLY_SCCACHE_PROGRAM}")
+endif()
 include(cmake/Dependencies.cmake)
 
 add_library(spanly_core STATIC
