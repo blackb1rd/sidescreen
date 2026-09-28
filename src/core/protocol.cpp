@@ -49,6 +49,7 @@ bool plausible(uint8_t type, size_t len) {
     case Msg::ShareAudio: return len >= 4 && len <= 65536 && len % 4 == 0;
     case Msg::MicAudio: return len >= 2 && len <= 65536 && len % 2 == 0;
     case Msg::Standby: return len == 16;
+    case Msg::KeyframeRequest: return len == 0;
     default: return false;
     }
 }

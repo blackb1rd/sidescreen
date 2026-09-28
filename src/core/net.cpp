@@ -221,6 +221,35 @@ Socket udp(bool ipv6) {
     return s;
 }
 
+Socket bindUdp(uint16_t port) {
+    init();
+    Socket s(Handle(::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)));
+    if (!s.valid()) return {};
+    int zero = 0, size = 1 << 20;
+    setsockopt(s.handle(), IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&zero), sizeof zero);
+    setsockopt(s.handle(), SOL_SOCKET, SO_SNDBUF, reinterpret_cast<const char*>(&size), sizeof size);
+    sockaddr_in6 a{};
+    a.sin6_family = AF_INET6;
+    a.sin6_port = htons(port);
+    a.sin6_addr = in6addr_any;
+    if (::bind(s.handle(), reinterpret_cast<sockaddr*>(&a), sizeof a) != 0) return {};
+    return s;
+}
+
+long receiveFrom(const Socket& s, uint8_t* buf, size_t size, Address& from, int timeoutMs) {
+    if (pollOne(s.handle(), timeoutMs) <= 0) return 0;
+    socklen len = sizeof from.raw;
+    auto n = ::recvfrom(s.handle(), reinterpret_cast<char*>(buf), int(size), 0,
+                        reinterpret_cast<sockaddr*>(from.raw.data()), &len);
+    from.length = uint32_t(len);
+    return long(n);
+}
+
+bool sendTo(const Socket& s, const Address& to, ByteView data) {
+    return ::sendto(s.handle(), reinterpret_cast<const char*>(data.data()), int(data.size()), 0,
+                    reinterpret_cast<const sockaddr*>(to.raw.data()), socklen(to.length)) == long(data.size());
+}
+
 void sendBroadcast(const Socket& s, const std::array<uint8_t, 4>& address, uint16_t port, ByteView data) {
     sockaddr_in a{};
     a.sin_family = AF_INET;

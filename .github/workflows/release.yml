@@ -73,22 +73,26 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
-      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-      - run: cmake --build build --config Release --target spanly --parallel
+          sudo apt-get install -y --no-install-recommends ninja-build libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: cmake --preset release && cmake --build --preset release --target spanly --parallel
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --preset windows && cmake --build --preset windows --target spanly --parallel
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: |
           mkdir -p dist/spanly
-          strip build/spanly
-          cp build/spanly README.md LICENSE packaging/linux/70-spanly.rules dist/spanly/
+          strip build/release/spanly
+          cp build/release/spanly README.md LICENSE packaging/linux/70-spanly.rules dist/spanly/
           tar -C dist -czf ${{ matrix.archive }} spanly
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist/spanly | Out-Null
-          Copy-Item build/Release/spanly.exe, README.md, LICENSE dist/spanly/
+          Copy-Item build/windows/Release/spanly.exe, README.md, LICENSE dist/spanly/
           Compress-Archive -Path dist/spanly -DestinationPath ${{ matrix.archive }}
       - uses: actions/upload-artifact@v5
         with:

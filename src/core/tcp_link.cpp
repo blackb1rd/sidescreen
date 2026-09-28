@@ -53,7 +53,47 @@ void TcpLink::send(Msg type, ByteView payload) {
         std::scoped_lock l(m_);
         if (!established_ || closed_) return;
     }
+    if ((type == Msg::Frame || type == Msg::Config) && sendUdp(type, payload)) return;
     queue(encode(type, payload));
+}
+
+void TcpLink::offerUdp() {
+    auto& endpoint = UdpEndpoint::shared();
+    if (!endpoint.available()) return;
+    udpToken_ = crypto::random(16);
+    packetizer_ = std::make_unique<UdpPacketizer>(udpKey_);
+    std::weak_ptr<TcpLink> weak = std::static_pointer_cast<TcpLink>(shared_from_this());
+    endpoint.expect(udpToken_, [weak](const net::Address& from) {
+        auto self = weak.lock();
+        if (!self) return;
+        bool first;
+        {
+            std::scoped_lock l(self->m_);
+            first = !self->udpPeer_;
+            self->udpPeer_ = from; // also follows the tablet if its address changes
+        }
+        if (!first) return;
+        self->queue(encode(Msg::UdpReady));
+        log("Wi-Fi video over UDP");
+    });
+    Bytes offer = udpToken_;
+    offer.push_back(uint8_t(kUdpVideoPort >> 8U));
+    offer.push_back(uint8_t(kUdpVideoPort & 0xFFU));
+    queue(encode(Msg::UdpOffer, offer));
+}
+
+/// Encoder thread. False if the tablet isn't on UDP (send over TCP instead).
+bool TcpLink::sendUdp(Msg type, ByteView payload) {
+    std::optional<net::Address> peer;
+    {
+        std::scoped_lock l(m_);
+        peer = udpPeer_;
+    }
+    if (!peer || !packetizer_) return false;
+    uint32_t id = type == Msg::Frame && payload.size() >= 5 ? u32At(payload, 1) : ++configId_;
+    for (const Bytes& d : packetizer_->packetize(uint8_t(type), id, payload))
+        UdpEndpoint::shared().send(*peer, d);
+    return true;
 }
 
 void TcpLink::queue(Bytes message) {
@@ -75,6 +115,7 @@ void TcpLink::close(const std::string& reason) {
         wake_.notify_all();
     }
     socket_.shutdown(); // wakes the reader
+    if (!udpToken_.empty()) UdpEndpoint::shared().forget(udpToken_);
     if (onClosed) onClosed();
     if (!wasUp) return;
     log("{} link closed ({})", kindName(kind_), reason);
@@ -90,6 +131,8 @@ void TcpLink::handle(const Message& m) {
             helloSeen_ = established_ = true;
         }
         if (first) log("tablet connected over {}", kindName(kind_));
+        // Caps bit 1: the tablet can take its video over UDP.
+        if (first && secret_ && m.payload.size() >= 16 && (u32At(m.payload, 12) & 2U)) offerUdp();
     } else if (m.type == uint8_t(Msg::Standby)) {
         bool first;
         {
@@ -146,6 +189,7 @@ bool TcpLink::handshake(Bytes& raw, const Bytes& secret) {
     ByteView clientNonce(raw.data() + crypto::kMagic.size(), crypto::kNonceSize);
     Bytes serverNonce = crypto::random(crypto::kNonceSize);
     keys_ = crypto::serverKeys(secret, clientNonce, serverNonce);
+    udpKey_ = crypto::udpKey(secret, clientNonce, serverNonce);
     raw.erase(raw.begin(), raw.begin() + ptrdiff_t(crypto::kMagic.size() + crypto::kNonceSize));
     return net::sendAll(socket_, serverNonce);
 }

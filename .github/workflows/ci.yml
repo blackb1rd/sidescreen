@@ -15,17 +15,26 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - name: Install GStreamer and GLib (Linux)
+      - name: Install Ninja (Mac)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+      - name: Install GStreamer, GLib and Ninja (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
-      - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build --config Release --parallel
-      - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
+          sudo apt-get install -y --no-install-recommends ninja-build libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+      - name: Build and test (Mac, Linux)
+        if: runner.os != 'Windows'
+        run: |
+          cmake --preset release
+          cmake --build --preset release --parallel
+          ctest --preset release
+      - name: Build and test (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake --preset windows
+          cmake --build --preset windows --parallel
+          ctest --preset windows
       - name: Build the microphone driver (Mac)
         if: runner.os == 'macOS'
         run: |
@@ -41,16 +50,14 @@ jobs:
         run: |
           pip install clang-format==23.1.1 clang-tidy==22.1.8
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+          sudo apt-get install -y --no-install-recommends ninja-build libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
       - name: clang-format
         run: clang-format --dry-run --Werror $(git ls-files 'src/*.cpp' 'src/*.hpp' 'tests/*.cpp' 'tests/*.hpp')
-      - name: Configure (for compile_commands.json)
-        run: CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-      - name: Build
-        run: cmake --build build --parallel
+      - name: Build with clang (for compile_commands.json)
+        run: cmake --preset tidy && cmake --build --preset tidy --parallel
       - name: clang-tidy (the code built on Linux)
         run: |
-          clang-tidy -p build --quiet $(git ls-files 'src/core/*.cpp' 'src/app/*.cpp' 'src/platform/common/*.cpp' \
+          clang-tidy -p build/tidy --quiet $(git ls-files 'src/core/*.cpp' 'src/app/*.cpp' 'src/platform/common/*.cpp' \
             'src/platform/linux/*.cpp' 'src/platform/posix/*.cpp' 'tests/*.cpp') 2>&1 | tee tidy.log
           ! grep -E "(warning|error):" tidy.log
 
@@ -59,9 +66,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DSPANLY_SANITIZE=ON
-      - run: cmake --build build --parallel
-      - run: ctest --test-dir build --output-on-failure
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build
+      - run: cmake --preset asan && cmake --build --preset asan --parallel && ctest --preset asan
 
   file-length:
     runs-on: ubuntu-latest

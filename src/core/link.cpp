@@ -73,6 +73,9 @@ void Link::handle(const Message& m) {
     case Msg::ShareStatus:
         if (onShareStatus) onShareStatus(p[0], p[1] != 0);
         break;
+    case Msg::KeyframeRequest:
+        if (onKeyframeRequest) onKeyframeRequest();
+        break;
     case Msg::Ack:
         if (onAck) onAck(u32At(p, 0));
         break;

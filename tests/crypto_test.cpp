@@ -40,3 +40,31 @@ TEST(roundTripsAndRejectsTampering) {
     sealed[0] ^= 1;
     CHECK(!crypto::open(sealed, key, 7));
 }
+
+#include "core/udp_video.hpp"
+
+TEST(packetizesVideoIntoSealedDatagrams) {
+    crypto::Key key{};
+    crypto::randomBytes(key.data(), key.size());
+    UdpPacketizer p(key);
+    Bytes payload(3000);
+    for (size_t i = 0; i < payload.size(); ++i)
+        payload[i] = uint8_t(i);
+    auto datagrams = p.packetize(uint8_t(Msg::Frame), 42, payload);
+    CHECK(datagrams.size() == 3);
+    Bytes joined;
+    for (size_t i = 0; i < datagrams.size(); ++i) {
+        const Bytes& d = datagrams[i];
+        CHECK(d.size() <= 1200);
+        uint64_t seq = 0;
+        for (int b = 0; b < 8; ++b)
+            seq = (seq << 8U) | d[size_t(b)];
+        auto plain = crypto::open(ByteView(d.data() + 8, d.size() - 8), key, seq);
+        CHECK(plain.has_value());
+        if (!plain) return;
+        CHECK((*plain)[0] == uint8_t(Msg::Frame) && u32At(*plain, 1) == 42);
+        CHECK((size_t((*plain)[5]) << 8U | (*plain)[6]) == i && (size_t((*plain)[7]) << 8U | (*plain)[8]) == 3);
+        joined.insert(joined.end(), plain->begin() + 9, plain->end());
+    }
+    CHECK(joined == payload);
+}

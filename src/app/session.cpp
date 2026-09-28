@@ -244,6 +244,10 @@ void TabletSession::setViewing(bool on) {
     if (on && encoder()) startStream();
 }
 
+void TabletSession::requestKeyframe() {
+    if (auto e = encoder()) e->requestKeyframe();
+}
+
 void TabletSession::acked(uint32_t frameId) {
     if (auto ms = flow_.acked(frameId)) stats_.latency(*ms);
 }

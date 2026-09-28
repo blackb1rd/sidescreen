@@ -31,6 +31,9 @@ Key hkdf(ByteView secret, ByteView salt, std::string_view info);
 /// Session keys for the host (server) side.
 Keys serverKeys(ByteView secret, ByteView clientNonce, ByteView serverNonce);
 
+/// The key for video datagrams (host to tablet) of one Wi-Fi session.
+Key udpKey(ByteView secret, ByteView clientNonce, ByteView serverNonce);
+
 /// ciphertext || tag
 Bytes seal(ByteView plain, const Key& key, uint64_t counter);
 std::optional<Bytes> open(ByteView record, const Key& key, uint64_t counter);

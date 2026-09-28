@@ -20,6 +20,7 @@ struct Options {
     bool manageAdb = true;
     std::optional<bool> restoreCursor;
     bool usb = true;
+    bool udp = true; // Wi-Fi video over UDP when the tablet can take it
 
     /// Exits on --help or an unknown option.
     static Options parse(int argc, char** argv);

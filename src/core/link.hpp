@@ -46,6 +46,7 @@ public:
     std::function<void(uint8_t state, bool control)> onShareStatus;
     std::function<void(const Bytes&)> onShareAudio;
     std::function<void(const Bytes&)> onMicAudio;
+    std::function<void()> onKeyframeRequest;
 
     /// The tablet this connection belongs to (known from its HELLO).
     std::shared_ptr<TabletSession> session() const;

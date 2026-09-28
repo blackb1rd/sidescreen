@@ -9,6 +9,7 @@ namespace spanly {
 
 Controller::Controller(Options opts) : opts_(std::move(opts)), pointer_(platform::Pointer::create()) {
     if (opts_.usb) usb_ = UsbLink::create([this] { return chosenSerial(); });
+    UdpEndpoint::shared().setEnabled(opts_.udp);
     adb_ = std::make_unique<TcpListener>(TcpListener::kAdbPort, Link::Kind::Adb);
     wifi_ = std::make_unique<TcpListener>(TcpListener::kWifiPort, Link::Kind::Wifi,
                                           [this] { return settings_.wifiSecret(); });
@@ -144,6 +145,10 @@ void Controller::wire(const std::shared_ptr<Link>& l) {
         platform::runOnMain([this, weak] {
             if (auto l = weak.lock()) closed(l);
         });
+    };
+    l->onKeyframeRequest = [weak] {
+        auto l = weak.lock();
+        if (auto s = l ? l->session() : nullptr) s->requestKeyframe();
     };
     l->onAck = [weak](uint32_t frameId) {
         auto l = weak.lock();

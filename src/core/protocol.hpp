@@ -33,6 +33,8 @@ enum class Msg : uint8_t {
     RemoteKey = 22,
     MicStart = 26,
     MicStop = 27,
+    UdpOffer = 29, // token (16) + UDP port u16: send your video registration there
+    UdpReady = 30, // video now comes over UDP
     // Tablet -> host
     Touch = 10,
     Hello = 11,
@@ -48,6 +50,7 @@ enum class Msg : uint8_t {
     ShareAudio = 24,
     MicAudio = 25,
     Standby = 28,
+    KeyframeRequest = 31, // a frame was lost (video over UDP): send a keyframe
 };
 
 constexpr uint8_t kMarker = 0x5A;

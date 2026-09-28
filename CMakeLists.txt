@@ -30,6 +30,7 @@ add_library(spanly_core STATIC
   src/core/beacon.cpp
   src/core/usb.cpp
   src/core/usb_io.cpp
+  src/core/udp_video.cpp
 )
 target_include_directories(spanly_core PUBLIC src)
 target_link_libraries(spanly_core PUBLIC spanly::mbedcrypto spanly::libusb)

@@ -107,7 +107,9 @@ mouse, scroll, keys ◀── touch / pen / zoom ───┘          └─ ge
 C++23 with CMake; mbedTLS and libusb are fetched and linked statically.
 
 ```sh
-cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
+cmake --preset release && cmake --build --preset release && ctest --preset release
+# other presets: debug, asan (AddressSanitizer + UBSan), tidy (clang, for clang-tidy),
+# mac-universal (Apple silicon + Intel), windows (Visual Studio 2022)
 scripts/build-mac.sh                  # universal Spanly.app -> dist/ (signed; see the script)
 python3 scripts/make-icons.py         # regenerate the icon from assets/icon-source.jpeg
 ```

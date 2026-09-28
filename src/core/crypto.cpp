@@ -52,6 +52,12 @@ Keys serverKeys(ByteView secret, ByteView clientNonce, ByteView serverNonce) {
     return {hkdf(secret, salt, "spanly s2c"), hkdf(secret, salt, "spanly c2s")};
 }
 
+Key udpKey(ByteView secret, ByteView clientNonce, ByteView serverNonce) {
+    Bytes salt(clientNonce.begin(), clientNonce.end());
+    salt.insert(salt.end(), serverNonce.begin(), serverNonce.end());
+    return hkdf(secret, salt, "spanly udp s2c");
+}
+
 namespace {
 
 std::array<uint8_t, 12> nonce(uint64_t counter) {

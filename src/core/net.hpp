@@ -4,6 +4,7 @@
 
 #include "core/protocol.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <string>
@@ -65,6 +66,21 @@ struct Interface {
 std::vector<Interface> interfaces();
 
 Socket udp(bool ipv6);
+
+/// A peer's address (IPv4 or IPv6), as a received datagram came from.
+struct Address {
+    std::array<uint8_t, 128> raw{};
+    uint32_t length = 0;
+    bool operator==(const Address& o) const {
+        return length == o.length && std::equal(raw.begin(), raw.begin() + length, o.raw.begin());
+    }
+};
+
+/// A UDP socket on all interfaces, IPv4 and IPv6.
+Socket bindUdp(uint16_t port);
+/// Wait up to `timeoutMs` for a datagram; its size (0 on timeout) and sender.
+long receiveFrom(const Socket& s, uint8_t* buf, size_t size, Address& from, int timeoutMs);
+bool sendTo(const Socket& s, const Address& to, ByteView data);
 void sendBroadcast(const Socket& s, const std::array<uint8_t, 4>& address, uint16_t port, ByteView data);
 /// To ff02::1 (all nodes on the link) through interface `index`.
 void sendAllNodes(const Socket& s, unsigned index, uint16_t port, ByteView data);

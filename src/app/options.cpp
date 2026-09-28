@@ -13,7 +13,7 @@ namespace {
 constexpr const char* kUsage =
     R"(usage: spanly [--hidpi | --standard] [--codec hevc|h264] [--position right|left|above|below|keep]
               [--display NAME] [--fps N] [--battery-fps N] [--bitrate MBPS] [--max-width PX] [--stats]
-              [--no-usb] [--no-adb] [--no-restore-cursor]
+              [--no-usb] [--no-udp] [--no-adb] [--no-restore-cursor]
 Options override the menu settings for this run only.
   --hidpi        always use a Retina virtual display (Automatic: Retina over USB)
   --standard     always use a non-Retina display at half the tablet's resolution
@@ -26,6 +26,7 @@ Options override the menu settings for this run only.
   --stats        log frame rate, latency and bitrate every 5 seconds
   --max-width    downscale if the display is wider than this many pixels
   --no-usb       don't use USB accessory mode
+  --no-udp       keep Wi-Fi video on TCP (by default it goes over UDP when the tablet can take it)
   --no-adb       don't manage adb (reverse port, app launch, tablet sleep/wake)
   --no-restore-cursor  leave the cursor on the tablet after a touch
 )";
@@ -71,6 +72,8 @@ Options Options::parse(int argc, char** argv) {
             o.restoreCursor = false;
         else if (a == "--no-usb")
             o.usb = false;
+        else if (a == "--no-udp")
+            o.udp = false;
         else if (a == "-h" || a == "--help") {
             std::fputs(kUsage, stdout);
             std::exit(0);

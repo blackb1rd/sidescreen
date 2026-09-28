@@ -37,6 +37,8 @@ public:
     void hello(const Hello& h);
     void setViewing(bool on);
     void acked(uint32_t frameId);
+    /// The tablet lost a frame (video over UDP).
+    void requestKeyframe();
     /// Make the display again (e.g. Retina switched on), keeping the tablet connected.
     void recreateDisplay();
     /// Restart capture with the current settings (e.g. sound on/off), keeping the display.

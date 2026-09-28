@@ -8,6 +8,7 @@
 #include "core/flow.hpp"
 #include "core/link.hpp"
 #include "core/net.hpp"
+#include "core/udp_video.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -43,6 +44,8 @@ private:
     bool handshake(Bytes& raw, const Bytes& secret);
     bool openRecords(Bytes& raw, Reader& reader);
     void queue(Bytes message);
+    void offerUdp();
+    bool sendUdp(Msg type, ByteView payload);
 
     net::Socket socket_;
     const Kind kind_;
@@ -60,6 +63,13 @@ private:
     bool established_ = false; // HELLO or STANDBY seen: heartbeats and sends may flow
     bool closed_ = false;
     std::atomic<Clock::rep> lastReceive_{Clock::now().time_since_epoch().count()};
+
+    // Video over UDP (Wi-Fi only, when the tablet can take it).
+    crypto::Key udpKey_{};
+    Bytes udpToken_;
+    std::unique_ptr<UdpPacketizer> packetizer_;
+    std::optional<net::Address> udpPeer_; // guarded by m_
+    uint32_t configId_ = 0;               // encoder thread
 };
 
 } // namespace spanly
